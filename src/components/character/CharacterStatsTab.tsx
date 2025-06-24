@@ -1,0 +1,1180 @@
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Character, StatType } from '../../types';
+import { calculateCombatStats, getExperienceForLevel, spendStatPoint, calculateEquipmentBonuses } from '../../utils/combatEngine';
+import { useGame } from '../../context/GameContext';
+import { useCustomAlert } from '../ui/CustomAlert';
+import { Colors, ColorUtils } from '../../utils/colors';
+
+interface CharacterStatsTabProps {
+  character: Character;
+}
+
+const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
+  const { updateCharacter, saveGame, healCharacter } = useGame();
+  const { showAlert, AlertComponent } = useCustomAlert();
+
+  const combatStats = calculateCombatStats(character);
+  const experienceForNextLevel = getExperienceForLevel(character.level + 1);
+  const experienceProgress = (character.experience / experienceForNextLevel) * 100;
+
+  const handleSpendStatPoint = (statType: StatType) => {
+    if (character.unspentStatPoints <= 0) {
+      showAlert('No Points Available', 'You have no unspent stat points to distribute.');
+      return;
+    }
+
+    const updatedCharacter = spendStatPoint(character, statType);
+    updateCharacter(updatedCharacter);
+    saveGame();
+  };
+
+  const getStatIcon = (statType: StatType): string => {
+    return '';
+  };
+
+  const getStatColor = (statType: StatType): string => {
+    return ColorUtils.getClassColor(statType as any) || Colors.textSecondary;
+  };
+
+  const getStatDescription = (statType: StatType): string => {
+    switch (statType) {
+      case 'strength': return 'Increases physical damage';
+      case 'dexterity': return 'Improves accuracy, crit chance, and dodge';
+      case 'constitution': return 'Increases health and survivability';
+      case 'intelligence': return 'Boosts magic damage and mana';
+      case 'speed': return 'Determines turn order in combat';
+      default: return '';
+    }
+  };
+
+  const StatItem = ({ label, value, description }: { label: string; value: number | string; description?: string }) => (
+    <View style={styles.statItem}>
+      <View style={styles.statHeader}>
+        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={styles.statValue}>{value}</Text>
+      </View>
+      {description && <Text style={styles.statDescription}>{description}</Text>}
+    </View>
+  );
+
+  return (
+    <>
+      <ScrollView style={styles.container}>
+        <View style={styles.content}>
+          {/* Character Overview */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Character Overview</Text>
+            <View style={styles.overviewContainer}>
+              <View style={styles.overviewItem}>
+                <Text style={styles.overviewLabel}>Name</Text>
+                <Text style={styles.overviewValue}>{character.name}</Text>
+              </View>
+              <View style={styles.overviewItem}>
+                <Text style={styles.overviewLabel}>Class</Text>
+                <Text style={styles.overviewValue}>{character.class.name}</Text>
+              </View>
+              <View style={styles.overviewItem}>
+                <Text style={styles.overviewLabel}>Level</Text>
+                <Text style={styles.overviewValue}>{character.level}</Text>
+              </View>
+              <View style={styles.overviewItem}>
+                <Text style={styles.overviewLabel}>Total Battles</Text>
+                <Text style={styles.overviewValue}>{character.wins + character.losses}</Text>
+              </View>
+            </View>
+
+            {/* Developer Tools - Only visible in development mode */}
+            {__DEV__ && (
+              <View style={styles.devSection}>
+                <Text style={styles.devSectionTitle}>🛠️ Developer Tools</Text>
+                <View style={styles.devButtonsContainer}>
+                  <TouchableOpacity
+                    style={styles.devButton}
+                    onPress={() => {
+                      showAlert(
+                        'Developer Mode',
+                        'Set character to max level (999)? This will unlock all portal destinations and give massive stat bonuses.',
+                        [
+                          {
+                            text: 'Max Level!',
+                            style: 'default',
+                            onPress: () => {
+                              const updatedCharacter = {
+                                ...character,
+                                level: 999,
+                                experience: 999999999,
+                                unspentStatPoints: character.unspentStatPoints + 500, // Give lots of stat points
+                                gold: Math.max(character.gold, 100000), // Ensure plenty of gold
+                                currentHealth: character.maxHealth, // Full heal
+                                stats: {
+                                  ...character.stats,
+                                  strength: Math.max(character.stats.strength, 100),
+                                  dexterity: Math.max(character.stats.dexterity, 100),
+                                  constitution: Math.max(character.stats.constitution, 100),
+                                  intelligence: Math.max(character.stats.intelligence, 100),
+                                  speed: Math.max(character.stats.speed, 100)
+                                }
+                              };
+                              updateCharacter(updatedCharacter);
+                              saveGame();
+                              showAlert('Developer Boost Applied!', 'Character is now max level with boosted stats, gold, and stat points!');
+                            }
+                          },
+                          {
+                            text: 'Cancel',
+                            style: 'cancel'
+                          }
+                        ]
+                      );
+                    }}
+                  >
+                    <Text style={styles.devButtonText}>🚀 Max Level (999)</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.devButton, styles.devButtonSecondary]}
+                    onPress={() => {
+                      const updatedCharacter = {
+                        ...character,
+                        gold: character.gold + 10000,
+                        unspentStatPoints: character.unspentStatPoints + 50
+                      };
+                      updateCharacter(updatedCharacter);
+                      saveGame();
+                      showAlert('Resources Added!', 'Added 10,000 gold and 50 stat points!');
+                    }}
+                  >
+                    <Text style={styles.devButtonText}>💰 Add Resources</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Current Health Status */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Health Status</Text>
+            <View style={styles.healthContainer}>
+              <View style={styles.healthInfo}>
+                <Text style={styles.healthLabel}>Current Health</Text>
+                <Text style={[
+                  styles.healthValue,
+                  {
+                    color: character.currentHealth < character.maxHealth * 0.3 ? Colors.error :
+                      character.currentHealth < character.maxHealth * 0.6 ? Colors.warning : Colors.success
+                  }
+                ]}>
+                  {character.currentHealth} / {character.maxHealth} HP
+                </Text>
+                <Text style={styles.healthPercentage}>
+                  ({Math.round((character.currentHealth / character.maxHealth) * 100)}%)
+                </Text>
+              </View>
+              <View style={styles.healthBarContainer}>
+                <View style={styles.healthBar}>
+                  <View style={[
+                    styles.healthFill,
+                    {
+                      width: `${(character.currentHealth / character.maxHealth) * 100}%`,
+                      backgroundColor: character.currentHealth < character.maxHealth * 0.3 ? Colors.error :
+                        character.currentHealth < character.maxHealth * 0.6 ? Colors.warning : Colors.success
+                    }
+                  ]} />
+                </View>
+              </View>
+
+              <View style={styles.healingOptions}>
+                {character.currentHealth < character.maxHealth && (
+                  <TouchableOpacity
+                    style={[
+                      styles.healButton,
+                      character.gold < Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5)) && styles.healButtonDisabled
+                    ]}
+                    onPress={() => {
+                      const healCost = Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5));
+
+                      if (character.gold >= healCost) {
+                        showAlert(
+                          'Healing Services',
+                          `Restore your health to full for ${healCost} gold?\n\nCurrent: ${character.currentHealth}/${character.maxHealth} HP\nAfter healing: ${character.maxHealth}/${character.maxHealth} HP\n\nCost: ${healCost} gold\nYour gold: ${character.gold}`,
+                          [
+                            {
+                              text: 'Heal',
+                              style: 'default',
+                              onPress: () => {
+                                const updatedCharacter = {
+                                  ...character,
+                                  currentHealth: character.maxHealth,
+                                  gold: character.gold - healCost
+                                };
+                                updateCharacter(updatedCharacter);
+                                saveGame();
+                                showAlert('Healed!', 'Your wounds have been completely healed!');
+                              }
+                            },
+                            {
+                              text: 'Cancel',
+                              style: 'cancel'
+                            }
+                          ]
+                        );
+                      } else {
+                        showAlert('Insufficient Gold', `You need ${healCost} gold to heal, but you only have ${character.gold} gold.`);
+                      }
+                    }}
+                    disabled={character.gold < Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5))}
+                  >
+                    <Text style={[
+                      styles.healButtonText,
+                      character.gold < Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5)) && styles.healButtonTextDisabled
+                    ]}>
+                      Heal ({Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5))}g)
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {character.currentHealth >= character.maxHealth && (
+                  <View style={styles.fullHealthContainer}>
+                    <Text style={styles.fullHealthText}>
+                      Your health is already at maximum!
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {character.currentHealth < character.maxHealth * 0.5 && (
+                <View style={styles.healthWarning}>
+                  <Text style={styles.healthWarningText}>
+                    Warning: Low Health! Consider healing or resting in the wilderness.
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Enhanced Combat Stats */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Combat Statistics</Text>
+            <Text style={styles.sectionSubtitle}>Your effective combat performance</Text>
+            <View style={styles.combatStatsContainer}>
+              <View style={styles.combatStatsGrid}>
+                {(() => {
+                  const equipmentBreakdown = calculateEquipmentBonuses(character);
+                  return (
+                    <>
+                      <View style={styles.combatStatItem}>
+                        <Text style={styles.combatStatLabel}>Damage</Text>
+                        <Text style={styles.combatStatValue}>{combatStats.damage}</Text>
+                        {equipmentBreakdown.equipmentBonuses.damage > 0 && (
+                          <Text style={styles.combatStatBonus}>
+                            +{equipmentBreakdown.equipmentBonuses.damage} weapon
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.combatStatItem}>
+                        <Text style={styles.combatStatLabel}>Armor</Text>
+                        <Text style={styles.combatStatValue}>{combatStats.armor}</Text>
+                        {equipmentBreakdown.equipmentBonuses.armor > 0 && (
+                          <Text style={styles.combatStatBonus}>
+                            +{equipmentBreakdown.equipmentBonuses.armor} equipment
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.combatStatItem}>
+                        <Text style={styles.combatStatLabel}>Accuracy</Text>
+                        <Text style={styles.combatStatValue}>{combatStats.accuracy}%</Text>
+                        <Text style={styles.combatStatSource}>from DEX</Text>
+                      </View>
+                      <View style={styles.combatStatItem}>
+                        <Text style={styles.combatStatLabel}>Dodge</Text>
+                        <Text style={styles.combatStatValue}>{combatStats.dodge}%</Text>
+                        {equipmentBreakdown.equipmentBonuses.dodgeChance > 0 ? (
+                          <Text style={styles.combatStatBonus}>
+                            +{equipmentBreakdown.equipmentBonuses.dodgeChance}% equipment
+                          </Text>
+                        ) : (
+                          <Text style={styles.combatStatSource}>from DEX</Text>
+                        )}
+                      </View>
+                      <View style={styles.combatStatItem}>
+                        <Text style={styles.combatStatLabel}>Critical</Text>
+                        <Text style={styles.combatStatValue}>{combatStats.criticalChance}%</Text>
+                        {equipmentBreakdown.equipmentBonuses.criticalChance > 0 ? (
+                          <Text style={styles.combatStatBonus}>
+                            +{equipmentBreakdown.equipmentBonuses.criticalChance}% equipment
+                          </Text>
+                        ) : (
+                          <Text style={styles.combatStatSource}>from DEX</Text>
+                        )}
+                      </View>
+                      <View style={styles.combatStatItem}>
+                        <Text style={styles.combatStatLabel}>Speed</Text>
+                        <Text style={styles.combatStatValue}>{combatStats.speed}</Text>
+                        <Text style={styles.combatStatSource}>from SPD + DEX</Text>
+                      </View>
+                    </>
+                  );
+                })()}
+              </View>
+              <Text style={styles.combatStatsNote}>
+                Green values show equipment bonuses • Stats calculated from base attributes + equipment
+              </Text>
+            </View>
+          </View>
+
+          {/* Experience Progress */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Experience Progress</Text>
+            <View style={styles.experienceContainer}>
+              <View style={styles.experienceHeader}>
+                <Text style={styles.experienceText}>
+                  {character.experience} / {experienceForNextLevel} XP
+                </Text>
+                <Text style={styles.experiencePercent}>
+                  {Math.round(experienceProgress)}%
+                </Text>
+              </View>
+              <View style={styles.experienceBar}>
+                <View style={[styles.experienceFill, { width: `${Math.min(experienceProgress, 100)}%` }]} />
+              </View>
+              <Text style={styles.experienceNext}>
+                {experienceForNextLevel - character.experience} XP to next level
+              </Text>
+            </View>
+          </View>
+
+          {/* Unspent Stat Points */}
+          {character.unspentStatPoints > 0 && (
+            <View style={styles.section}>
+              <View style={styles.unspentContainer}>
+                <Text style={styles.unspentTitle}>
+                  {character.unspentStatPoints} Stat Points Available!
+                </Text>
+                <Text style={styles.unspentSubtext}>
+                  Tap the + buttons below to distribute your points
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Enhanced Stats Breakdown */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Character Statistics</Text>
+            <Text style={styles.sectionSubtitle}>Base stats + Equipment bonuses = Total</Text>
+            <View style={styles.statsGrid}>
+              {(() => {
+                const equipmentBreakdown = calculateEquipmentBonuses(character);
+                return Object.entries(equipmentBreakdown.baseStats).map(([statType, baseValue]) => {
+                  const statColor = getStatColor(statType as StatType);
+                  const equipmentBonus = equipmentBreakdown.equipmentStats[statType as keyof typeof equipmentBreakdown.equipmentStats];
+                  const totalValue = equipmentBreakdown.totalStats[statType as keyof typeof equipmentBreakdown.totalStats];
+
+                  return (
+                    <View key={statType} style={styles.statRow}>
+                      <View style={styles.statInfo}>
+                        <View style={styles.statHeader}>
+                          <Text style={[styles.statIcon, { color: statColor }]}>
+                            {getStatIcon(statType as StatType)}
+                          </Text>
+                          <Text style={[styles.statName, { color: statColor }]}>
+                            {statType.charAt(0).toUpperCase() + statType.slice(1)}
+                          </Text>
+                          <View style={styles.statBreakdown}>
+                            <Text style={[styles.baseStatValue, { color: statColor }]}>
+                              {baseValue}
+                            </Text>
+                            {equipmentBonus !== 0 && (
+                              <>
+                                <Text style={styles.statOperator}>+</Text>
+                                <Text style={styles.equipmentBonus}>
+                                  {equipmentBonus}
+                                </Text>
+                                <Text style={styles.statOperator}>=</Text>
+                              </>
+                            )}
+                            <Text style={[styles.totalStatValue, { color: statColor }]}>
+                              {totalValue}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={[styles.statDescription, { color: statColor }]}>
+                          {getStatDescription(statType as StatType)}
+                        </Text>
+                        {equipmentBonus !== 0 && (
+                          <Text style={styles.equipmentNote}>
+                            +{equipmentBonus} from equipment
+                          </Text>
+                        )}
+                      </View>
+
+                      {/* Add Point Button */}
+                      {character.unspentStatPoints > 0 && (
+                        <TouchableOpacity
+                          style={[styles.addButton, { borderColor: statColor }]}
+                          onPress={() => handleSpendStatPoint(statType as StatType)}
+                        >
+                          <Text style={[styles.addButtonText, { color: statColor }]}>
+                            +
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                });
+              })()}
+            </View>
+          </View>
+
+          {/* Combat Stats */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Combat Effectiveness</Text>
+            <View style={styles.statsGrid}>
+              <StatItem
+                label="Health"
+                value={combatStats.health}
+                description="Total hit points in combat"
+              />
+              <StatItem
+                label="Damage"
+                value={combatStats.damage}
+                description="Base damage per attack"
+              />
+              <StatItem
+                label="Armor"
+                value={combatStats.armor}
+                description="Damage reduction from equipment"
+              />
+              <StatItem
+                label="Accuracy"
+                value={`${combatStats.accuracy}%`}
+                description="Chance to hit opponents"
+              />
+              <StatItem
+                label="Dodge"
+                value={`${combatStats.dodge}%`}
+                description="Chance to avoid attacks"
+              />
+              <StatItem
+                label="Critical"
+                value={`${combatStats.criticalChance}%`}
+                description="Chance for double damage"
+              />
+            </View>
+          </View>
+
+          {/* Equipment Summary */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Equipment Status</Text>
+            <View style={styles.equipmentSummary}>
+              {Object.entries(character.equipment).map(([slot, item]) => (
+                <View key={slot} style={styles.equipmentSlot}>
+                  <Text style={styles.equipmentSlotName}>
+                    {slot.charAt(0).toUpperCase() + slot.slice(1)}:
+                  </Text>
+                  <Text style={styles.equipmentSlotItem}>
+                    {item ? item.name : 'Empty'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Battle Record */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Battle Record</Text>
+            <View style={styles.battleRecord}>
+              <View style={styles.recordItem}>
+                <Text style={styles.recordLabel}>Wins</Text>
+                <Text style={[styles.recordValue, { color: Colors.success }]}>{character.wins}</Text>
+              </View>
+              <View style={styles.recordItem}>
+                <Text style={styles.recordLabel}>Losses</Text>
+                <Text style={[styles.recordValue, { color: Colors.error }]}>{character.losses}</Text>
+              </View>
+              <View style={styles.recordItem}>
+                <Text style={styles.recordLabel}>Win Rate</Text>
+                <Text style={styles.recordValue}>
+                  {character.wins + character.losses > 0
+                    ? `${Math.round((character.wins / (character.wins + character.losses)) * 100)}%`
+                    : '0%'
+                  }
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Combat Stats Preview */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Combat Stats (Estimated)</Text>
+
+            <View style={styles.combatStatsGrid}>
+              <View style={styles.combatStatItem}>
+                <Text style={styles.combatStatLabel}>Health</Text>
+                <Text style={styles.combatStatValue}>
+                  {Math.floor(100 + (character.stats.constitution * 5))}
+                </Text>
+              </View>
+
+              <View style={styles.combatStatItem}>
+                <Text style={styles.combatStatLabel}>Base Damage</Text>
+                <Text style={styles.combatStatValue}>
+                  {character.stats.strength + (character.stats.intelligence > character.stats.strength ? Math.floor(character.stats.intelligence * 0.8) : 0)}
+                </Text>
+              </View>
+
+              <View style={styles.combatStatItem}>
+                <Text style={styles.combatStatLabel}>Accuracy</Text>
+                <Text style={styles.combatStatValue}>
+                  {Math.min(95, 50 + (character.stats.dexterity * 2))}%
+                </Text>
+              </View>
+
+              <View style={styles.combatStatItem}>
+                <Text style={styles.combatStatLabel}>Crit Chance</Text>
+                <Text style={styles.combatStatValue}>
+                  {Math.floor(character.stats.dexterity / 10)}%
+                </Text>
+              </View>
+
+              <View style={styles.combatStatItem}>
+                <Text style={styles.combatStatLabel}>Dodge Chance</Text>
+                <Text style={styles.combatStatValue}>
+                  {Math.floor(character.stats.dexterity / 15)}%
+                </Text>
+              </View>
+
+              <View style={styles.combatStatItem}>
+                <Text style={styles.combatStatLabel}>Speed</Text>
+                <Text style={styles.combatStatValue}>
+                  {character.stats.speed}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Build Recommendations */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Build Recommendations</Text>
+
+            <View style={styles.buildsContainer}>
+              <View style={styles.buildItem}>
+                <Text style={styles.buildName}>Warrior Build</Text>
+                <Text style={styles.buildDescription}>
+                  Focus on Strength and Constitution for high damage and survivability
+                </Text>
+              </View>
+
+              <View style={styles.buildItem}>
+                <Text style={styles.buildName}>Rogue Build</Text>
+                <Text style={styles.buildDescription}>
+                  Emphasize Dexterity for critical hits and dodging attacks
+                </Text>
+              </View>
+
+              <View style={styles.buildItem}>
+                <Text style={styles.buildName}>Mage Build</Text>
+                <Text style={styles.buildDescription}>
+                  Prioritize Intelligence for magical damage with some Constitution
+                </Text>
+              </View>
+
+              <View style={styles.buildItem}>
+                <Text style={styles.buildName}>Speed Demon</Text>
+                <Text style={styles.buildDescription}>
+                  Max Speed for always going first, with balanced other stats
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+      <AlertComponent />
+    </>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  content: {
+    padding: 20,
+  },
+  section: {
+    marginBottom: 25,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginBottom: 15,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.primary,
+    paddingBottom: 5,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  overviewContainer: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    borderWidth: 2,
+    borderColor: Colors.border,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  overviewItem: {
+    width: '48%',
+    marginBottom: 10,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderAccent,
+  },
+  overviewLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+    fontWeight: '600',
+  },
+  overviewValue: {
+    fontSize: 16,
+    color: Colors.text,
+    fontWeight: 'bold',
+  },
+  experienceContainer: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    shadowColor: Colors.experience,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  experienceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  experienceText: {
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: '600',
+  },
+  experiencePercent: {
+    fontSize: 14,
+    color: Colors.experience,
+    fontWeight: 'bold',
+  },
+  experienceBar: {
+    height: 10,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderAccent,
+  },
+  experienceFill: {
+    height: '100%',
+    backgroundColor: Colors.experience,
+  },
+  experienceNext: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  statsGrid: {
+    gap: 10,
+  },
+  statItem: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  statHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: '600',
+  },
+  statValue: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: 'bold',
+  },
+  statDescription: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  equipmentSummary: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  equipmentSlot: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderAccent,
+  },
+  equipmentSlotName: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  equipmentSlotItem: {
+    fontSize: 14,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  battleRecord: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderWidth: 2,
+    borderColor: Colors.border,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  recordItem: {
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: 8,
+    padding: 12,
+    minWidth: 80,
+    borderWidth: 1,
+    borderColor: Colors.borderAccent,
+  },
+  recordLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  recordValue: {
+    fontSize: 18,
+    color: Colors.text,
+    fontWeight: 'bold',
+  },
+  unspentContainer: {
+    backgroundColor: ColorUtils.withOpacity(Colors.warning, 0.1),
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.warning,
+    alignItems: 'center',
+    shadowColor: Colors.warning,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+  unspentTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.warning,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  unspentSubtext: {
+    fontSize: 12,
+    color: Colors.warning,
+    fontWeight: '600',
+  },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  statInfo: {
+    flex: 1,
+  },
+  statIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  statName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  addButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    marginLeft: 12,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  addButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.background,
+  },
+  combatStatsContainer: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  combatStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  combatStatItem: {
+    width: '48%',
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.borderAccent,
+    shadowColor: Colors.background,
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  combatStatLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  combatStatValue: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: 'bold',
+  },
+  combatStatsNote: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  buildsContainer: {
+    gap: 12,
+  },
+  buildItem: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  buildName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  buildDescription: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+  },
+  healthContainer: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    shadowColor: Colors.health,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  healthInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  healthLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  healthValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  healthPercentage: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  healthBarContainer: {
+    marginBottom: 8,
+  },
+  healthBar: {
+    height: 12,
+    backgroundColor: Colors.surfaceElevated,
+    borderRadius: 6,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.borderAccent,
+  },
+  healthFill: {
+    height: '100%',
+    borderRadius: 6,
+  },
+  healthWarning: {
+    backgroundColor: ColorUtils.withOpacity(Colors.error, 0.1),
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 2,
+    borderColor: Colors.error,
+    shadowColor: Colors.error,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  healthWarningText: {
+    fontSize: 12,
+    color: Colors.error,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  healingOptions: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  healButton: {
+    backgroundColor: Colors.success,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: Colors.accent,
+    shadowColor: Colors.success,
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  healButtonDisabled: {
+    backgroundColor: Colors.disabled,
+    borderColor: Colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  healButtonText: {
+    color: Colors.background,
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  healButtonTextDisabled: {
+    color: Colors.textMuted,
+  },
+  fullHealthContainer: {
+    backgroundColor: Colors.success,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 2,
+    borderColor: Colors.accent,
+    shadowColor: Colors.success,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  fullHealthText: {
+    fontSize: 14,
+    color: Colors.background,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  // NEW: Styles for enhanced stats breakdown
+  sectionSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: 15,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  statBreakdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  baseStatValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  statOperator: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  equipmentBonus: {
+    fontSize: 14,
+    color: Colors.success,
+    fontWeight: 'bold',
+    backgroundColor: Colors.surfaceElevated,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.borderAccent,
+  },
+  totalStatValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  equipmentNote: {
+    fontSize: 10,
+    color: Colors.success,
+    fontStyle: 'italic',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  combatStatBonus: {
+    fontSize: 10,
+    color: Colors.success,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  combatStatSource: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  // Developer Tools Styles
+  devSection: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: Colors.warning + '20',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.warning,
+    shadowColor: Colors.warning,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  devSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.warning,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  devButtonsContainer: {
+    gap: 8,
+  },
+  devButton: {
+    backgroundColor: Colors.warning,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: Colors.accent,
+    shadowColor: Colors.warning,
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  devButtonSecondary: {
+    backgroundColor: Colors.info,
+    shadowColor: Colors.info,
+  },
+  devButtonText: {
+    color: Colors.background,
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});
+
+export default CharacterStatsTab; 
