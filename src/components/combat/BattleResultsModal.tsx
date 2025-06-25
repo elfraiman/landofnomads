@@ -4,6 +4,7 @@ import { Character, DetailedBattleResult, Item } from '../../types';
 import { Colors, ColorUtils } from '../../utils/colors';
 import { useGame } from '../../context/GameContext';
 import { ItemStatsDisplay } from '../ui/ItemStatsDisplay';
+import { StatusBar } from '../ui/StatusBar';
 
 interface BattleResultsModalProps {
   battleResult: DetailedBattleResult | null;
@@ -18,13 +19,12 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
   visible,
   onClose,
 }) => {
-  const { currentCharacter } = useGame();
+  const { currentCharacter, getExperiencePercentage, getExperienceToNextLevel } = useGame();
 
   if (!visible || !battleResult) return null;
 
   const playerHealthAfter = battleResult.playerHealthAfter || 0;
   const playerMaxHealth = battleResult.playerMaxHealth || 100;
-  const monstersKilled = battleResult.monstersKilled || [];
   const totalRewards = battleResult.totalRewards || { experience: 0, gold: 0, items: [] };
   const combatLog = battleResult.combatLog || ['No combat log available'];
 
@@ -288,13 +288,82 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Active Buffs/Auras Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Active Buffs & Auras</Text>
+              <View style={styles.buffsContainer}>
+                {currentCharacter ? (
+                  <>
+                    {/* Active Auras - Future implementation */}
+                    {/* This section will be populated with active auras that the player has acquired */}
+                    {/* 
+                    {currentCharacter.activeAuras && currentCharacter.activeAuras.length > 0 && (
+                      currentCharacter.activeAuras.map((aura: any, index: number) => (
+                        <View key={`aura-${index}`} style={[styles.buffItem, styles.auraItem]}>
+                          <View style={styles.buffHeader}>
+                            <Text style={styles.buffSource}>{aura.name}</Text>
+                            <Text style={styles.buffSlot}>({aura.type})</Text>
+                          </View>
+                          <View style={styles.buffEffects}>
+                            {aura.effects.map((effect: string, effectIndex: number) => (
+                              <View key={effectIndex} style={[styles.buffChip, styles.auraChip]}>
+                                <Text style={styles.buffText}>{effect}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      ))
+                    )}
+                    */}
+
+                    {/* Temporary Buffs - Potions, Spells, etc. */}
+                    {/* 
+                    {currentCharacter.temporaryBuffs && currentCharacter.temporaryBuffs.length > 0 && (
+                      currentCharacter.temporaryBuffs.map((buff: any, index: number) => (
+                        <View key={`temp-${index}`} style={[styles.buffItem, styles.temporaryBuff]}>
+                          <View style={styles.buffHeader}>
+                            <Text style={styles.buffSource}>{buff.name}</Text>
+                            <Text style={styles.buffSlot}>({buff.duration}s left)</Text>
+                          </View>
+                          <View style={styles.buffEffects}>
+                            {buff.effects.map((effect: string, effectIndex: number) => (
+                              <View key={effectIndex} style={[styles.buffChip, styles.temporaryBuffChip]}>
+                                <Text style={styles.buffText}>{effect}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      ))
+                    )}
+                    */}
+
+                    {/* Show message when no active buffs */}
+                    <View style={styles.noBuffsContainer}>
+                      <Text style={styles.noBuffsText}>No active buffs or auras</Text>
+                      <Text style={styles.noBuffsSubtext}>Acquire auras and use consumables to gain temporary bonuses!</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.noBuffsContainer}>
+                    <Text style={styles.noBuffsText}>No character data available</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
             {/* Combat Log Section */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Combat Log</Text>
-              <ScrollView style={styles.combatLogContainer} nestedScrollEnabled={true}>
-                {combatLog.map((entry, index) => {
-                  return renderCombatLogEntry(entry, index);
-                })}
+              <ScrollView style={styles.combatLogContainer} nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+                {combatLog && combatLog.length > 0 ? (
+                  combatLog.map((entry, index) => {
+                    return renderCombatLogEntry(entry, index);
+                  })
+                ) : (
+                  <Text style={[styles.combatLogEntry, { color: Colors.textSecondary, fontStyle: 'italic' }]}>
+                    No combat log available
+                  </Text>
+                )}
               </ScrollView>
             </View>
 
@@ -321,32 +390,26 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
             )} */}
 
             {/* Health Status Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Health Status</Text>
-              <View style={styles.healthContainer}>
-                <View style={styles.healthInfo}>
-                  <Text style={styles.healthLabel}>Current Health</Text>
-                  <Text style={[styles.healthValue, { color: healthColor }]}>
-                    {playerHealthAfter} / {playerMaxHealth} HP
-                  </Text>
-                  <View style={styles.healthBarContainer}>
-                    <View style={styles.healthBarBackground}>
-                      <View
-                        style={[
-                          styles.healthBarFill,
-                          {
-                            width: `${healthPercentage}%`,
-                            backgroundColor: healthColor
-                          }
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.healthPercentage}>{Math.round(healthPercentage)}%</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
+            <StatusBar
+              title="Health"
+              value={`${playerHealthAfter} / ${playerMaxHealth} HP`}
+              valueColor={healthColor}
+              percentage={healthPercentage}
+              fillColor={healthColor}
+              bottomText={`${Math.round(healthPercentage)}%`}
+            />
 
+            {/* Experience Progress Section */}
+            {currentCharacter && (
+              <StatusBar
+                title="Experience"
+                value={`Lv${currentCharacter.level} • ${currentCharacter.experience} XP${totalRewards.experience > 0 ? ` +${totalRewards.experience}` : ''}`}
+                valueColor={Colors.experience}
+                percentage={getExperiencePercentage(currentCharacter)}
+                fillColor={Colors.experience}
+                bottomText={`${getExperienceToNextLevel(currentCharacter)} XP to Lv${currentCharacter.level + 1}`}
+              />
+            )}
 
             {/* Rewards Summary Section */}
             <View style={styles.section}>
@@ -355,13 +418,13 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
                 <View style={styles.rewardItem}>
                   <Text style={styles.rewardLabel}>Experience Gained</Text>
                   <Text style={[styles.rewardValue, { color: Colors.experience }]}>
-                    +{totalRewards.experience} XP
+                    +{totalRewards.experience || 0} XP
                   </Text>
                 </View>
                 <View style={styles.rewardItem}>
                   <Text style={styles.rewardLabel}>Gold Earned</Text>
                   <Text style={[styles.rewardValue, { color: Colors.gold }]}>
-                    +{totalRewards.gold} Gold
+                    +{totalRewards.gold || 0} Gold
                   </Text>
                 </View>
                 {totalRewards.items && totalRewards.items.length > 0 && (
@@ -418,60 +481,64 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 10,
   },
   modal: {
     backgroundColor: Colors.surface,
     borderRadius: 12,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '90%',
+    maxHeight: '95%',
+    minHeight: '80%',
     borderWidth: 1,
     borderColor: Colors.border,
+    flex: 1,
   },
   header: {
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 60,
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: Colors.text,
+    flex: 1,
   },
   resultBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
+    marginLeft: 8,
   },
   resultText: {
     color: Colors.text,
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 12,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: 16,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: Colors.text,
-    marginBottom: 12,
+    marginBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     paddingBottom: 4,
   },
   healthContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    gap: 12,
   },
   healthInfo: {
     flex: 1,
@@ -482,7 +549,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   healthValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
   },
@@ -492,26 +559,26 @@ const styles = StyleSheet.create({
   },
   healthBarBackground: {
     flex: 1,
-    height: 8,
+    height: 10,
     backgroundColor: Colors.background,
-    borderRadius: 4,
+    borderRadius: 5,
     marginRight: 8,
   },
   healthBarFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 5,
   },
   healthPercentage: {
     fontSize: 12,
     color: Colors.textSecondary,
-    minWidth: 35,
+    minWidth: 40,
   },
   healButton: {
     backgroundColor: Colors.success,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 6,
-    marginLeft: 16,
+    marginTop: 8,
   },
   healButtonDisabled: {
     backgroundColor: Colors.secondary,
@@ -520,6 +587,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: 'bold',
     fontSize: 14,
+    textAlign: 'center',
   },
   healButtonTextDisabled: {
     color: Colors.textMuted,
@@ -531,7 +599,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   monsterName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: Colors.text,
     marginBottom: 4,
@@ -539,13 +607,14 @@ const styles = StyleSheet.create({
   monsterRewards: {
     flexDirection: 'row',
     gap: 16,
+    flexWrap: 'wrap',
   },
   rewardText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
   },
   rewardsContainer: {
-    gap: 12,
+    gap: 10,
   },
   rewardItem: {
     flexDirection: 'row',
@@ -554,38 +623,45 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     padding: 12,
     borderRadius: 6,
+    minHeight: 44,
   },
   rewardLabel: {
     fontSize: 14,
     color: Colors.textSecondary,
+    flex: 1,
   },
   rewardValue: {
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'right',
   },
   combatLogContainer: {
     backgroundColor: Colors.background,
     borderRadius: 6,
-    maxHeight: 200,
-    minHeight: 100,
+    maxHeight: 250,
+    minHeight: 150,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   combatLogEntry: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 6,
+    flexWrap: 'wrap',
   },
   footer: {
-    padding: 20,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
   closeButton: {
     backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 6,
+    paddingVertical: 14,
+    borderRadius: 8,
     alignItems: 'center',
+    minHeight: 48,
   },
   closeButtonText: {
     color: Colors.text,
@@ -598,17 +674,18 @@ const styles = StyleSheet.create({
   itemNamesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
     marginTop: 8,
     marginBottom: 12,
   },
   itemNameChip: {
     backgroundColor: Colors.primary,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 4,
     borderWidth: 1,
     borderColor: Colors.accent,
+    minHeight: 32,
   },
   itemNameText: {
     fontSize: 12,
@@ -642,22 +719,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   itemName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     flex: 1,
   },
   itemLevel: {
     fontSize: 12,
     color: Colors.textSecondary,
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    marginLeft: 8,
   },
   itemType: {
     fontSize: 12,
     color: Colors.textSecondary,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   itemDescription: {
     fontSize: 12,
@@ -677,5 +751,196 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  statValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  buffsContainer: {
+    gap: 10,
+  },
+  buffItem: {
+    backgroundColor: Colors.background,
+    padding: 12,
+    borderRadius: 6,
+    minHeight: 44,
+  },
+  buffHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  buffSource: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  buffSlot: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  buffEffects: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  buffChip: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    minHeight: 32,
+  },
+  buffText: {
+    fontSize: 12,
+    color: Colors.background,
+    fontWeight: '600',
+  },
+  noBuffsContainer: {
+    padding: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+  },
+  noBuffsText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+  },
+  noBuffsSubtext: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  temporaryBuff: {
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.warning,
+  },
+  temporaryBuffChip: {
+    backgroundColor: Colors.warning,
+  },
+  auraItem: {
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.experience,
+  },
+  auraChip: {
+    backgroundColor: Colors.experience,
+  },
+  // Experience bar styles
+  experienceContainer: {
+    gap: 8,
+  },
+  experienceInfo: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  experienceLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  experienceValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  experienceGain: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  experienceBarContainer: {
+    marginTop: 8,
+    gap: 4,
+  },
+  // Compact experience styles
+  experienceInfoCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  experienceLabelCompact: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  experienceValueCompact: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+  },
+  experienceGainCompact: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  experienceBarCompact: {
+    gap: 4,
+  },
+  experiencePercentageCompact: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+
+  experienceBarBackground: {
+    height: 20,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  experienceBarFill: {
+    height: '100%',
+    borderRadius: 10,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  experienceGainOverlay: {
+    height: '100%',
+    borderRadius: 10,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    opacity: 0.7,
+  },
+  experiencePercentage: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  nextLevelInfo: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  nextLevelText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  noDataText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 }); 

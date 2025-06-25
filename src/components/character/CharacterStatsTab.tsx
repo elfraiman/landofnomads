@@ -1,22 +1,23 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Character, StatType } from '../../types';
-import { calculateCombatStats, getExperienceForLevel, spendStatPoint, calculateEquipmentBonuses } from '../../utils/combatEngine';
+import { calculateCombatStats, spendStatPoint, calculateEquipmentBonuses } from '../../utils/combatEngine';
 import { useGame } from '../../context/GameContext';
 import { useCustomAlert } from '../ui/CustomAlert';
 import { Colors, ColorUtils } from '../../utils/colors';
+import { StatusBar } from '../ui/StatusBar';
 
 interface CharacterStatsTabProps {
   character: Character;
 }
 
 const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
-  const { updateCharacter, saveGame, healCharacter } = useGame();
+  const { updateCharacter, saveGame, healCharacter, getExperienceForLevel, getExperiencePercentage, getExperienceToNextLevel } = useGame();
   const { showAlert, AlertComponent } = useCustomAlert();
 
   const combatStats = calculateCombatStats(character);
   const experienceForNextLevel = getExperienceForLevel(character.level + 1);
-  const experienceProgress = (character.experience / experienceForNextLevel) * 100;
+  const experienceProgress = getExperiencePercentage(character);
 
   const handleSpendStatPoint = (statType: StatType) => {
     if (character.unspentStatPoints <= 0) {
@@ -153,436 +154,408 @@ const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
           </View>
 
           {/* Current Health Status */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Health Status</Text>
-            <View style={styles.healthContainer}>
-              <View style={styles.healthInfo}>
-                <Text style={styles.healthLabel}>Current Health</Text>
-                <Text style={[
-                  styles.healthValue,
-                  {
-                    color: character.currentHealth < character.maxHealth * 0.3 ? Colors.error :
-                      character.currentHealth < character.maxHealth * 0.6 ? Colors.warning : Colors.success
+          <StatusBar
+            title="Health"
+            value={`${character.currentHealth} / ${character.maxHealth} HP`}
+            valueColor={
+              character.currentHealth < character.maxHealth * 0.3 ? Colors.error :
+                character.currentHealth < character.maxHealth * 0.6 ? Colors.warning : Colors.success
+            }
+            percentage={(character.currentHealth / character.maxHealth) * 100}
+            fillColor={
+              character.currentHealth < character.maxHealth * 0.3 ? Colors.error :
+                character.currentHealth < character.maxHealth * 0.6 ? Colors.warning : Colors.success
+            }
+            bottomText={`${Math.round((character.currentHealth / character.maxHealth) * 100)}%`}
+          />
+
+          {/* Healing Options */}
+          <View style={styles.healingOptions}>
+            {character.currentHealth < character.maxHealth && (
+              <TouchableOpacity
+                style={[
+                  styles.healButton,
+                  character.gold < Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5)) && styles.healButtonDisabled
+                ]}
+                onPress={() => {
+                  const healCost = Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5));
+
+                  if (character.gold >= healCost) {
+                    showAlert(
+                      'Healing Services',
+                      `Restore your health to full for ${healCost} gold?\n\nCurrent: ${character.currentHealth}/${character.maxHealth} HP\nAfter healing: ${character.maxHealth}/${character.maxHealth} HP\n\nCost: ${healCost} gold\nYour gold: ${character.gold}`,
+                      [
+                        {
+                          text: 'Heal',
+                          style: 'default',
+                          onPress: () => {
+                            const updatedCharacter = {
+                              ...character,
+                              currentHealth: character.maxHealth,
+                              gold: character.gold - healCost
+                            };
+                            updateCharacter(updatedCharacter);
+                            saveGame();
+                            showAlert('Healed!', 'Your wounds have been completely healed!');
+                          }
+                        },
+                        {
+                          text: 'Cancel',
+                          style: 'cancel'
+                        }
+                      ]
+                    );
+                  } else {
+                    showAlert('Insufficient Gold', `You need ${healCost} gold to heal, but you only have ${character.gold} gold.`);
                   }
+                }}
+                disabled={character.gold < Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5))}
+              >
+                <Text style={[
+                  styles.healButtonText,
+                  character.gold < Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5)) && styles.healButtonTextDisabled
                 ]}>
-                  {character.currentHealth} / {character.maxHealth} HP
+                  Heal ({Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5))}g)
                 </Text>
-                <Text style={styles.healthPercentage}>
-                  ({Math.round((character.currentHealth / character.maxHealth) * 100)}%)
+              </TouchableOpacity>
+            )}
+            {character.currentHealth >= character.maxHealth && (
+              <View style={styles.fullHealthContainer}>
+                <Text style={styles.fullHealthText}>
+                  Your health is already at maximum!
                 </Text>
               </View>
-              <View style={styles.healthBarContainer}>
-                <View style={styles.healthBar}>
-                  <View style={[
-                    styles.healthFill,
-                    {
-                      width: `${(character.currentHealth / character.maxHealth) * 100}%`,
-                      backgroundColor: character.currentHealth < character.maxHealth * 0.3 ? Colors.error :
-                        character.currentHealth < character.maxHealth * 0.6 ? Colors.warning : Colors.success
-                    }
-                  ]} />
-                </View>
-              </View>
-
-              <View style={styles.healingOptions}>
-                {character.currentHealth < character.maxHealth && (
-                  <TouchableOpacity
-                    style={[
-                      styles.healButton,
-                      character.gold < Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5)) && styles.healButtonDisabled
-                    ]}
-                    onPress={() => {
-                      const healCost = Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5));
-
-                      if (character.gold >= healCost) {
-                        showAlert(
-                          'Healing Services',
-                          `Restore your health to full for ${healCost} gold?\n\nCurrent: ${character.currentHealth}/${character.maxHealth} HP\nAfter healing: ${character.maxHealth}/${character.maxHealth} HP\n\nCost: ${healCost} gold\nYour gold: ${character.gold}`,
-                          [
-                            {
-                              text: 'Heal',
-                              style: 'default',
-                              onPress: () => {
-                                const updatedCharacter = {
-                                  ...character,
-                                  currentHealth: character.maxHealth,
-                                  gold: character.gold - healCost
-                                };
-                                updateCharacter(updatedCharacter);
-                                saveGame();
-                                showAlert('Healed!', 'Your wounds have been completely healed!');
-                              }
-                            },
-                            {
-                              text: 'Cancel',
-                              style: 'cancel'
-                            }
-                          ]
-                        );
-                      } else {
-                        showAlert('Insufficient Gold', `You need ${healCost} gold to heal, but you only have ${character.gold} gold.`);
-                      }
-                    }}
-                    disabled={character.gold < Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5))}
-                  >
-                    <Text style={[
-                      styles.healButtonText,
-                      character.gold < Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5)) && styles.healButtonTextDisabled
-                    ]}>
-                      Heal ({Math.max(10, Math.floor((character.maxHealth - character.currentHealth) * 0.5))}g)
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {character.currentHealth >= character.maxHealth && (
-                  <View style={styles.fullHealthContainer}>
-                    <Text style={styles.fullHealthText}>
-                      Your health is already at maximum!
-                    </Text>
-                  </View>
-                )}
-              </View>
-              {character.currentHealth < character.maxHealth * 0.5 && (
-                <View style={styles.healthWarning}>
-                  <Text style={styles.healthWarningText}>
-                    Warning: Low Health! Consider healing or resting in the wilderness.
-                  </Text>
-                </View>
-              )}
-            </View>
+            )}
           </View>
-
-          {/* Enhanced Combat Stats */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Combat Statistics</Text>
-            <Text style={styles.sectionSubtitle}>Your effective combat performance</Text>
-            <View style={styles.combatStatsContainer}>
-              <View style={styles.combatStatsGrid}>
-                {(() => {
-                  const equipmentBreakdown = calculateEquipmentBonuses(character);
-                  return (
-                    <>
-                      <View style={styles.combatStatItem}>
-                        <Text style={styles.combatStatLabel}>Damage</Text>
-                        <Text style={styles.combatStatValue}>{combatStats.damage}</Text>
-                        {equipmentBreakdown.equipmentBonuses.damage > 0 && (
-                          <Text style={styles.combatStatBonus}>
-                            +{equipmentBreakdown.equipmentBonuses.damage} weapon
-                          </Text>
-                        )}
-                      </View>
-                      <View style={styles.combatStatItem}>
-                        <Text style={styles.combatStatLabel}>Armor</Text>
-                        <Text style={styles.combatStatValue}>{combatStats.armor}</Text>
-                        {equipmentBreakdown.equipmentBonuses.armor > 0 && (
-                          <Text style={styles.combatStatBonus}>
-                            +{equipmentBreakdown.equipmentBonuses.armor} equipment
-                          </Text>
-                        )}
-                      </View>
-                      <View style={styles.combatStatItem}>
-                        <Text style={styles.combatStatLabel}>Accuracy</Text>
-                        <Text style={styles.combatStatValue}>{combatStats.accuracy}%</Text>
-                        <Text style={styles.combatStatSource}>from DEX</Text>
-                      </View>
-                      <View style={styles.combatStatItem}>
-                        <Text style={styles.combatStatLabel}>Dodge</Text>
-                        <Text style={styles.combatStatValue}>{combatStats.dodge}%</Text>
-                        {equipmentBreakdown.equipmentBonuses.dodgeChance > 0 ? (
-                          <Text style={styles.combatStatBonus}>
-                            +{equipmentBreakdown.equipmentBonuses.dodgeChance}% equipment
-                          </Text>
-                        ) : (
-                          <Text style={styles.combatStatSource}>from DEX</Text>
-                        )}
-                      </View>
-                      <View style={styles.combatStatItem}>
-                        <Text style={styles.combatStatLabel}>Critical</Text>
-                        <Text style={styles.combatStatValue}>{combatStats.criticalChance}%</Text>
-                        {equipmentBreakdown.equipmentBonuses.criticalChance > 0 ? (
-                          <Text style={styles.combatStatBonus}>
-                            +{equipmentBreakdown.equipmentBonuses.criticalChance}% equipment
-                          </Text>
-                        ) : (
-                          <Text style={styles.combatStatSource}>from DEX</Text>
-                        )}
-                      </View>
-                      <View style={styles.combatStatItem}>
-                        <Text style={styles.combatStatLabel}>Speed</Text>
-                        <Text style={styles.combatStatValue}>{combatStats.speed}</Text>
-                        <Text style={styles.combatStatSource}>from SPD + DEX</Text>
-                      </View>
-                    </>
-                  );
-                })()}
-              </View>
-              <Text style={styles.combatStatsNote}>
-                Green values show equipment bonuses • Stats calculated from base attributes + equipment
+          {character.currentHealth < character.maxHealth * 0.5 && (
+            <View style={styles.healthWarning}>
+              <Text style={styles.healthWarningText}>
+                Warning: Low Health! Consider healing or resting in the wilderness.
               </Text>
-            </View>
-          </View>
-
-          {/* Experience Progress */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Experience Progress</Text>
-            <View style={styles.experienceContainer}>
-              <View style={styles.experienceHeader}>
-                <Text style={styles.experienceText}>
-                  {character.experience} / {experienceForNextLevel} XP
-                </Text>
-                <Text style={styles.experiencePercent}>
-                  {Math.round(experienceProgress)}%
-                </Text>
-              </View>
-              <View style={styles.experienceBar}>
-                <View style={[styles.experienceFill, { width: `${Math.min(experienceProgress, 100)}%` }]} />
-              </View>
-              <Text style={styles.experienceNext}>
-                {experienceForNextLevel - character.experience} XP to next level
-              </Text>
-            </View>
-          </View>
-
-          {/* Unspent Stat Points */}
-          {character.unspentStatPoints > 0 && (
-            <View style={styles.section}>
-              <View style={styles.unspentContainer}>
-                <Text style={styles.unspentTitle}>
-                  {character.unspentStatPoints} Stat Points Available!
-                </Text>
-                <Text style={styles.unspentSubtext}>
-                  Tap the + buttons below to distribute your points
-                </Text>
-              </View>
             </View>
           )}
 
-          {/* Enhanced Stats Breakdown */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Character Statistics</Text>
-            <Text style={styles.sectionSubtitle}>Base stats + Equipment bonuses = Total</Text>
-            <View style={styles.statsGrid}>
+          {/* Experience Progress */}
+          <StatusBar
+            title="Experience"
+            value={`Lv${character.level} • ${character.experience} XP`}
+            valueColor={Colors.experience}
+            percentage={experienceProgress}
+            fillColor={Colors.experience}
+            bottomText={`${getExperienceToNextLevel(character)} XP to Lv${character.level + 1}`}
+          />
+        </View>
+
+        {/* Enhanced Combat Stats */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Combat Statistics</Text>
+          <Text style={styles.sectionSubtitle}>Your effective combat performance</Text>
+          <View style={styles.combatStatsContainer}>
+            <View style={styles.combatStatsGrid}>
               {(() => {
                 const equipmentBreakdown = calculateEquipmentBonuses(character);
-                return Object.entries(equipmentBreakdown.baseStats).map(([statType, baseValue]) => {
-                  const statColor = getStatColor(statType as StatType);
-                  const equipmentBonus = equipmentBreakdown.equipmentStats[statType as keyof typeof equipmentBreakdown.equipmentStats];
-                  const totalValue = equipmentBreakdown.totalStats[statType as keyof typeof equipmentBreakdown.totalStats];
-
-                  return (
-                    <View key={statType} style={styles.statRow}>
-                      <View style={styles.statInfo}>
-                        <View style={styles.statHeader}>
-                          <Text style={[styles.statIcon, { color: statColor }]}>
-                            {getStatIcon(statType as StatType)}
-                          </Text>
-                          <Text style={[styles.statName, { color: statColor }]}>
-                            {statType.charAt(0).toUpperCase() + statType.slice(1)}
-                          </Text>
-                          <View style={styles.statBreakdown}>
-                            <Text style={[styles.baseStatValue, { color: statColor }]}>
-                              {baseValue}
-                            </Text>
-                            {equipmentBonus !== 0 && (
-                              <>
-                                <Text style={styles.statOperator}>+</Text>
-                                <Text style={styles.equipmentBonus}>
-                                  {equipmentBonus}
-                                </Text>
-                                <Text style={styles.statOperator}>=</Text>
-                              </>
-                            )}
-                            <Text style={[styles.totalStatValue, { color: statColor }]}>
-                              {totalValue}
-                            </Text>
-                          </View>
-                        </View>
-                        <Text style={[styles.statDescription, { color: statColor }]}>
-                          {getStatDescription(statType as StatType)}
+                return (
+                  <>
+                    <View style={styles.combatStatItem}>
+                      <Text style={styles.combatStatLabel}>Damage</Text>
+                      <Text style={styles.combatStatValue}>{combatStats.damage}</Text>
+                      {equipmentBreakdown.equipmentBonuses.damage > 0 && (
+                        <Text style={styles.combatStatBonus}>
+                          +{equipmentBreakdown.equipmentBonuses.damage} weapon
                         </Text>
-                        {equipmentBonus !== 0 && (
-                          <Text style={styles.equipmentNote}>
-                            +{equipmentBonus} from equipment
-                          </Text>
-                        )}
-                      </View>
-
-                      {/* Add Point Button */}
-                      {character.unspentStatPoints > 0 && (
-                        <TouchableOpacity
-                          style={[styles.addButton, { borderColor: statColor }]}
-                          onPress={() => handleSpendStatPoint(statType as StatType)}
-                        >
-                          <Text style={[styles.addButtonText, { color: statColor }]}>
-                            +
-                          </Text>
-                        </TouchableOpacity>
                       )}
                     </View>
-                  );
-                });
+                    <View style={styles.combatStatItem}>
+                      <Text style={styles.combatStatLabel}>Armor</Text>
+                      <Text style={styles.combatStatValue}>{combatStats.armor}</Text>
+                      {equipmentBreakdown.equipmentBonuses.armor > 0 && (
+                        <Text style={styles.combatStatBonus}>
+                          +{equipmentBreakdown.equipmentBonuses.armor} equipment
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.combatStatItem}>
+                      <Text style={styles.combatStatLabel}>Accuracy</Text>
+                      <Text style={styles.combatStatValue}>{combatStats.accuracy}%</Text>
+                      <Text style={styles.combatStatSource}>from DEX</Text>
+                    </View>
+                    <View style={styles.combatStatItem}>
+                      <Text style={styles.combatStatLabel}>Dodge</Text>
+                      <Text style={styles.combatStatValue}>{combatStats.dodge}%</Text>
+                      {equipmentBreakdown.equipmentBonuses.dodgeChance > 0 ? (
+                        <Text style={styles.combatStatBonus}>
+                          +{equipmentBreakdown.equipmentBonuses.dodgeChance}% equipment
+                        </Text>
+                      ) : (
+                        <Text style={styles.combatStatSource}>from DEX</Text>
+                      )}
+                    </View>
+                    <View style={styles.combatStatItem}>
+                      <Text style={styles.combatStatLabel}>Critical</Text>
+                      <Text style={styles.combatStatValue}>{combatStats.criticalChance}%</Text>
+                      {equipmentBreakdown.equipmentBonuses.criticalChance > 0 ? (
+                        <Text style={styles.combatStatBonus}>
+                          +{equipmentBreakdown.equipmentBonuses.criticalChance}% equipment
+                        </Text>
+                      ) : (
+                        <Text style={styles.combatStatSource}>from DEX</Text>
+                      )}
+                    </View>
+                    <View style={styles.combatStatItem}>
+                      <Text style={styles.combatStatLabel}>Speed</Text>
+                      <Text style={styles.combatStatValue}>{combatStats.speed}</Text>
+                      <Text style={styles.combatStatSource}>from SPD + DEX</Text>
+                    </View>
+                  </>
+                );
               })()}
             </View>
+            <Text style={styles.combatStatsNote}>
+              Green values show equipment bonuses • Stats calculated from base attributes + equipment
+            </Text>
           </View>
+        </View>
 
-          {/* Combat Stats */}
+        {/* Unspent Stat Points */}
+        {character.unspentStatPoints > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Combat Effectiveness</Text>
-            <View style={styles.statsGrid}>
-              <StatItem
-                label="Health"
-                value={combatStats.health}
-                description="Total hit points in combat"
-              />
-              <StatItem
-                label="Damage"
-                value={combatStats.damage}
-                description="Base damage per attack"
-              />
-              <StatItem
-                label="Armor"
-                value={combatStats.armor}
-                description="Damage reduction from equipment"
-              />
-              <StatItem
-                label="Accuracy"
-                value={`${combatStats.accuracy}%`}
-                description="Chance to hit opponents"
-              />
-              <StatItem
-                label="Dodge"
-                value={`${combatStats.dodge}%`}
-                description="Chance to avoid attacks"
-              />
-              <StatItem
-                label="Critical"
-                value={`${combatStats.criticalChance}%`}
-                description="Chance for double damage"
-              />
+            <View style={styles.unspentContainer}>
+              <Text style={styles.unspentTitle}>
+                {character.unspentStatPoints} Stat Points Available!
+              </Text>
+              <Text style={styles.unspentSubtext}>
+                Tap the + buttons below to distribute your points
+              </Text>
             </View>
           </View>
+        )}
 
-          {/* Equipment Summary */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Equipment Status</Text>
-            <View style={styles.equipmentSummary}>
-              {Object.entries(character.equipment).map(([slot, item]) => (
-                <View key={slot} style={styles.equipmentSlot}>
-                  <Text style={styles.equipmentSlotName}>
-                    {slot.charAt(0).toUpperCase() + slot.slice(1)}:
-                  </Text>
-                  <Text style={styles.equipmentSlotItem}>
-                    {item ? item.name : 'Empty'}
-                  </Text>
-                </View>
-              ))}
+        {/* Enhanced Stats Breakdown */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Character Statistics</Text>
+          <Text style={styles.sectionSubtitle}>Base stats + Equipment bonuses = Total</Text>
+          <View style={styles.statsGrid}>
+            {(() => {
+              const equipmentBreakdown = calculateEquipmentBonuses(character);
+              return Object.entries(equipmentBreakdown.baseStats).map(([statType, baseValue]) => {
+                const statColor = getStatColor(statType as StatType);
+                const equipmentBonus = equipmentBreakdown.equipmentStats[statType as keyof typeof equipmentBreakdown.equipmentStats];
+                const totalValue = equipmentBreakdown.totalStats[statType as keyof typeof equipmentBreakdown.totalStats];
+
+                return (
+                  <View key={statType} style={styles.statRow}>
+                    <View style={styles.statInfo}>
+                      <View style={styles.statHeader}>
+                        <Text style={[styles.statIcon, { color: statColor }]}>
+                          {getStatIcon(statType as StatType)}
+                        </Text>
+                        <Text style={[styles.statName, { color: statColor }]}>
+                          {statType.charAt(0).toUpperCase() + statType.slice(1)}
+                        </Text>
+                        <View style={styles.statBreakdown}>
+                          <Text style={[styles.baseStatValue, { color: statColor }]}>
+                            {baseValue}
+                          </Text>
+                          {equipmentBonus !== 0 && (
+                            <>
+                              <Text style={styles.statOperator}>+</Text>
+                              <Text style={styles.equipmentBonus}>
+                                {equipmentBonus}
+                              </Text>
+                              <Text style={styles.statOperator}>=</Text>
+                            </>
+                          )}
+                          <Text style={[styles.totalStatValue, { color: statColor }]}>
+                            {totalValue}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.statDescription, { color: statColor }]}>
+                        {getStatDescription(statType as StatType)}
+                      </Text>
+                      {equipmentBonus !== 0 && (
+                        <Text style={styles.equipmentNote}>
+                          +{equipmentBonus} from equipment
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* Add Point Button */}
+                    {character.unspentStatPoints > 0 && (
+                      <TouchableOpacity
+                        style={[styles.addButton, { borderColor: statColor }]}
+                        onPress={() => handleSpendStatPoint(statType as StatType)}
+                      >
+                        <Text style={[styles.addButtonText, { color: statColor }]}>
+                          +
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              });
+            })()}
+          </View>
+        </View>
+
+        {/* Combat Stats */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Combat Effectiveness</Text>
+          <View style={styles.statsGrid}>
+            <StatItem
+              label="Health"
+              value={combatStats.health}
+              description="Total hit points in combat"
+            />
+            <StatItem
+              label="Damage"
+              value={combatStats.damage}
+              description="Base damage per attack"
+            />
+            <StatItem
+              label="Armor"
+              value={combatStats.armor}
+              description="Damage reduction from equipment"
+            />
+            <StatItem
+              label="Accuracy"
+              value={`${combatStats.accuracy}%`}
+              description="Chance to hit opponents"
+            />
+            <StatItem
+              label="Dodge"
+              value={`${combatStats.dodge}%`}
+              description="Chance to avoid attacks"
+            />
+            <StatItem
+              label="Critical"
+              value={`${combatStats.criticalChance}%`}
+              description="Chance for double damage"
+            />
+          </View>
+        </View>
+
+        {/* Equipment Summary */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Equipment Status</Text>
+          <View style={styles.equipmentSummary}>
+            {Object.entries(character.equipment).map(([slot, item]) => (
+              <View key={slot} style={styles.equipmentSlot}>
+                <Text style={styles.equipmentSlotName}>
+                  {slot.charAt(0).toUpperCase() + slot.slice(1)}:
+                </Text>
+                <Text style={styles.equipmentSlotItem}>
+                  {item ? item.name : 'Empty'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Battle Record */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Battle Record</Text>
+          <View style={styles.battleRecord}>
+            <View style={styles.recordItem}>
+              <Text style={styles.recordLabel}>Wins</Text>
+              <Text style={[styles.recordValue, { color: Colors.success }]}>{character.wins}</Text>
+            </View>
+            <View style={styles.recordItem}>
+              <Text style={styles.recordLabel}>Losses</Text>
+              <Text style={[styles.recordValue, { color: Colors.error }]}>{character.losses}</Text>
+            </View>
+            <View style={styles.recordItem}>
+              <Text style={styles.recordLabel}>Win Rate</Text>
+              <Text style={styles.recordValue}>
+                {character.wins + character.losses > 0
+                  ? `${Math.round((character.wins / (character.wins + character.losses)) * 100)}%`
+                  : '0%'
+                }
+              </Text>
             </View>
           </View>
+        </View>
 
-          {/* Battle Record */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Battle Record</Text>
-            <View style={styles.battleRecord}>
-              <View style={styles.recordItem}>
-                <Text style={styles.recordLabel}>Wins</Text>
-                <Text style={[styles.recordValue, { color: Colors.success }]}>{character.wins}</Text>
-              </View>
-              <View style={styles.recordItem}>
-                <Text style={styles.recordLabel}>Losses</Text>
-                <Text style={[styles.recordValue, { color: Colors.error }]}>{character.losses}</Text>
-              </View>
-              <View style={styles.recordItem}>
-                <Text style={styles.recordLabel}>Win Rate</Text>
-                <Text style={styles.recordValue}>
-                  {character.wins + character.losses > 0
-                    ? `${Math.round((character.wins / (character.wins + character.losses)) * 100)}%`
-                    : '0%'
-                  }
-                </Text>
-              </View>
+        {/* Combat Stats Preview */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Combat Stats (Estimated)</Text>
+
+          <View style={styles.combatStatsGrid}>
+            <View style={styles.combatStatItem}>
+              <Text style={styles.combatStatLabel}>Health</Text>
+              <Text style={styles.combatStatValue}>
+                {Math.floor(100 + (character.stats.constitution * 5))}
+              </Text>
+            </View>
+
+            <View style={styles.combatStatItem}>
+              <Text style={styles.combatStatLabel}>Base Damage</Text>
+              <Text style={styles.combatStatValue}>
+                {character.stats.strength + (character.stats.intelligence > character.stats.strength ? Math.floor(character.stats.intelligence * 0.8) : 0)}
+              </Text>
+            </View>
+
+            <View style={styles.combatStatItem}>
+              <Text style={styles.combatStatLabel}>Accuracy</Text>
+              <Text style={styles.combatStatValue}>
+                {Math.min(95, 50 + (character.stats.dexterity * 2))}%
+              </Text>
+            </View>
+
+            <View style={styles.combatStatItem}>
+              <Text style={styles.combatStatLabel}>Crit Chance</Text>
+              <Text style={styles.combatStatValue}>
+                {Math.floor(character.stats.dexterity / 10)}%
+              </Text>
+            </View>
+
+            <View style={styles.combatStatItem}>
+              <Text style={styles.combatStatLabel}>Dodge Chance</Text>
+              <Text style={styles.combatStatValue}>
+                {Math.floor(character.stats.dexterity / 15)}%
+              </Text>
+            </View>
+
+            <View style={styles.combatStatItem}>
+              <Text style={styles.combatStatLabel}>Speed</Text>
+              <Text style={styles.combatStatValue}>
+                {character.stats.speed}
+              </Text>
             </View>
           </View>
+        </View>
 
-          {/* Combat Stats Preview */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Combat Stats (Estimated)</Text>
+        {/* Build Recommendations */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Build Recommendations</Text>
 
-            <View style={styles.combatStatsGrid}>
-              <View style={styles.combatStatItem}>
-                <Text style={styles.combatStatLabel}>Health</Text>
-                <Text style={styles.combatStatValue}>
-                  {Math.floor(100 + (character.stats.constitution * 5))}
-                </Text>
-              </View>
-
-              <View style={styles.combatStatItem}>
-                <Text style={styles.combatStatLabel}>Base Damage</Text>
-                <Text style={styles.combatStatValue}>
-                  {character.stats.strength + (character.stats.intelligence > character.stats.strength ? Math.floor(character.stats.intelligence * 0.8) : 0)}
-                </Text>
-              </View>
-
-              <View style={styles.combatStatItem}>
-                <Text style={styles.combatStatLabel}>Accuracy</Text>
-                <Text style={styles.combatStatValue}>
-                  {Math.min(95, 50 + (character.stats.dexterity * 2))}%
-                </Text>
-              </View>
-
-              <View style={styles.combatStatItem}>
-                <Text style={styles.combatStatLabel}>Crit Chance</Text>
-                <Text style={styles.combatStatValue}>
-                  {Math.floor(character.stats.dexterity / 10)}%
-                </Text>
-              </View>
-
-              <View style={styles.combatStatItem}>
-                <Text style={styles.combatStatLabel}>Dodge Chance</Text>
-                <Text style={styles.combatStatValue}>
-                  {Math.floor(character.stats.dexterity / 15)}%
-                </Text>
-              </View>
-
-              <View style={styles.combatStatItem}>
-                <Text style={styles.combatStatLabel}>Speed</Text>
-                <Text style={styles.combatStatValue}>
-                  {character.stats.speed}
-                </Text>
-              </View>
+          <View style={styles.buildsContainer}>
+            <View style={styles.buildItem}>
+              <Text style={styles.buildName}>Warrior Build</Text>
+              <Text style={styles.buildDescription}>
+                Focus on Strength and Constitution for high damage and survivability
+              </Text>
             </View>
-          </View>
 
-          {/* Build Recommendations */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Build Recommendations</Text>
+            <View style={styles.buildItem}>
+              <Text style={styles.buildName}>Rogue Build</Text>
+              <Text style={styles.buildDescription}>
+                Emphasize Dexterity for critical hits and dodging attacks
+              </Text>
+            </View>
 
-            <View style={styles.buildsContainer}>
-              <View style={styles.buildItem}>
-                <Text style={styles.buildName}>Warrior Build</Text>
-                <Text style={styles.buildDescription}>
-                  Focus on Strength and Constitution for high damage and survivability
-                </Text>
-              </View>
+            <View style={styles.buildItem}>
+              <Text style={styles.buildName}>Mage Build</Text>
+              <Text style={styles.buildDescription}>
+                Prioritize Intelligence for magical damage with some Constitution
+              </Text>
+            </View>
 
-              <View style={styles.buildItem}>
-                <Text style={styles.buildName}>Rogue Build</Text>
-                <Text style={styles.buildDescription}>
-                  Emphasize Dexterity for critical hits and dodging attacks
-                </Text>
-              </View>
-
-              <View style={styles.buildItem}>
-                <Text style={styles.buildName}>Mage Build</Text>
-                <Text style={styles.buildDescription}>
-                  Prioritize Intelligence for magical damage with some Constitution
-                </Text>
-              </View>
-
-              <View style={styles.buildItem}>
-                <Text style={styles.buildName}>Speed Demon</Text>
-                <Text style={styles.buildDescription}>
-                  Max Speed for always going first, with balanced other stats
-                </Text>
-              </View>
+            <View style={styles.buildItem}>
+              <Text style={styles.buildName}>Speed Demon</Text>
+              <Text style={styles.buildDescription}>
+                Max Speed for always going first, with balanced other stats
+              </Text>
             </View>
           </View>
         </View>

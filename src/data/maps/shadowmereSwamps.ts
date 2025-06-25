@@ -6,6 +6,20 @@ const findItemByName = (name: string) => {
   return baseItems.find(item => item.name === name);
 };
 
+// Merchant inventory for Shadowmere Swamps
+export const shadowmereSwampsMerchantInventory = [
+  'Poison Blade',
+  'Assassin\'s Dagger',
+  'Shadowstrike Knife',
+  'Spider Armor',
+  'Swift Boots',
+  'Amulet of Protection',
+  'Ring of Power',
+  'Rapier',
+  'Vampire Sword',
+  'Lucky Charm Blade'
+];
+
 // ===== SHADOWMERE SWAMPS (Levels 8-15) =====
 export const shadowmereSwampsMonsters: WildernessMonster[] = [
   {
@@ -14,8 +28,8 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
     emoji: '',
     level: 8,
     baseStats: {
-      health: 90,
-      damage: 12,
+      health: 480,
+      damage: 20,
       armor: 6,
       speed: 14
     },
@@ -32,8 +46,8 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
     emoji: '',
     level: 9,
     baseStats: {
-      health: 110,
-      damage: 14,
+      health: 540,
+      damage: 24,
       armor: 8,
       speed: 10
     },
@@ -41,27 +55,27 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
     rarity: 'common',
     lootTable: [
       { itemId: 'witch_herb', chance: 0.35 },
-      { itemId: 'cursed_bone', chance: 0.2 },
+      { itemId: 'cursed_bone', chance: 0.25 },
       { itemId: 'mana_potion', chance: 0.3 }
     ]
   },
   {
-    id: 'marsh_troll',
-    name: 'Marsh Troll',
+    id: 'swamp_troll',
+    name: 'Swamp Troll',
     emoji: '',
     level: 10,
     baseStats: {
-      health: 130,
-      damage: 16,
-      armor: 12,
-      speed: 6
+      health: 600,
+      damage: 28,
+      armor: 10,
+      speed: 8
     },
     biomes: ['swamp'],
     rarity: 'uncommon',
     lootTable: [
-      { itemId: 'troll_hide', chance: 0.3 },
-      { itemId: 'regeneration_potion', chance: 0.15 },
-      { itemId: 'health_potion', chance: 0.4 }
+      { itemId: 'troll_moss', chance: 0.4 },
+      { itemId: 'regeneration_potion', chance: 0.2 },
+      { itemId: 'swamp_gem', chance: 0.15 }
     ]
   },
   {
@@ -70,93 +84,95 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
     emoji: '',
     level: 11,
     baseStats: {
-      health: 150,
-      damage: 18,
-      armor: 10,
+      health: 660,
+      damage: 32,
+      armor: 7,
       speed: 16
     },
     biomes: ['swamp'],
     rarity: 'uncommon',
     lootTable: [
-      { itemId: 'serpent_fang', chance: 0.4 },
-      { itemId: 'deadly_poison', chance: 0.25 },
-      { itemId: 'antidote', chance: 0.2 }
+      { itemId: 'venom_gland', chance: 0.5 },
+      { itemId: 'serpent_scale', chance: 0.3 },
+      { itemId: 'antidote', chance: 0.25 }
     ]
   },
   {
-    id: 'swamp_ogre',
-    name: 'Swamp Ogre',
+    id: 'mud_golem',
+    name: 'Mud Golem',
     emoji: '',
     level: 12,
     baseStats: {
-      health: 170,
-      damage: 20,
-      armor: 14,
-      speed: 4
+      health: 720,
+      damage: 30,
+      armor: 15,
+      speed: 6
     },
     biomes: ['swamp'],
-    rarity: 'uncommon',
+    rarity: 'rare',
     lootTable: [
-      { itemId: 'ogre_club', chance: 0.2 },
-      { itemId: 'thick_hide', chance: 0.3 },
-      { itemId: 'strength_potion', chance: 0.15 }
+      { itemId: 'golem_core', chance: 0.4 },
+      { itemId: 'earth_crystal', chance: 0.3 },
+      { itemId: 'defense_potion', chance: 0.2 }
     ]
   },
   {
-    id: 'shadow_stalker',
-    name: 'Shadow Stalker',
+    id: 'will_o_wisp',
+    name: 'Will O Wisp',
     emoji: '',
     level: 13,
     baseStats: {
-      health: 190,
-      damage: 22,
-      armor: 12,
-      speed: 18
+      health: 650,
+      damage: 38,
+      armor: 5,
+      speed: 20
     },
     biomes: ['swamp'],
     rarity: 'rare',
     lootTable: [
-      { itemId: 'shadow_essence', chance: 0.4 },
-      { itemId: 'stealth_potion', chance: 0.2 },
-      { itemId: 'mana_potion', chance: 0.25 }
+      { itemId: 'wisp_flame', chance: 0.6 },
+      { itemId: 'spirit_essence', chance: 0.4 },
+      { itemId: 'mana_potion', chance: 0.5 }
     ]
   },
   {
-    id: 'corrupted_treant',
-    name: 'Corrupted Treant',
+    id: 'swamp_dragon',
+    name: 'Swamp Dragon',
     emoji: '',
     level: 14,
     baseStats: {
-      health: 210,
-      damage: 24,
-      armor: 16,
-      speed: 2
-    },
-    biomes: ['swamp'],
-    rarity: 'rare',
-    lootTable: [
-      { itemId: 'corrupted_bark', chance: 0.35 },
-      { itemId: 'nature_gem', chance: 0.15 },
-      { itemId: 'health_potion', chance: 0.3 }
-    ]
-  },
-  {
-    id: 'hydra',
-    name: 'Hydra',
-    emoji: '',
-    level: 15,
-    baseStats: {
-      health: 230,
-      damage: 26,
+      health: 840,
+      damage: 42,
       armor: 18,
-      speed: 6
+      speed: 12
     },
     biomes: ['swamp'],
     rarity: 'elite',
     lootTable: [
-      { itemId: 'hydra_scale', chance: 0.5 },
-      { itemId: 'regeneration_gem', chance: 0.2 },
-      { itemId: 'legendary_potion', chance: 0.1 }
+      { itemId: 'dragon_scale', chance: 0.7 },
+      { itemId: 'dragon_claw', chance: 0.5 },
+      { itemId: 'rare_gem', chance: 0.4 },
+      { itemId: 'full_heal_potion', chance: 0.3 }
+    ]
+  },
+  {
+    id: 'swamp_lich',
+    name: 'Swamp Lich',
+    emoji: '',
+    level: 15,
+    baseStats: {
+      health: 900,
+      damage: 45,
+      armor: 12,
+      speed: 14
+    },
+    biomes: ['swamp'],
+    rarity: 'elite',
+    lootTable: [
+      { itemId: 'lich_phylactery', chance: 0.8 },
+      { itemId: 'dark_crystal', chance: 0.6 },
+      { itemId: 'necromancy_tome', chance: 0.3 },
+      { itemId: 'legendary_potion', chance: 0.2 }
     ]
   }
 ];

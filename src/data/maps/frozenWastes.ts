@@ -6,62 +6,76 @@ const findItemByName = (name: string) => {
   return baseItems.find(item => item.name === name);
 };
 
-// ===== FROZEN WASTES (Levels 32-45) =====
+// Merchant inventory for Frozen Wastes
+export const frozenWastesMerchantInventory = [
+  'Excalibur',
+  'Soul Reaper',
+  'Ice Mail',
+  'Hermes\' Sandals',
+  'Philosopher\'s Stone',
+  'Viper\'s Fang',
+  'Champion\'s Sword',
+  'Aegis Blade',
+  'Mail of the Dead',
+  'Blessed Angelic Armor'
+];
+
+// ===== FROZEN WASTES (Levels 35-45) =====
 export const frozenWastesMonsters: WildernessMonster[] = [
   {
-    id: 'ice_wolf',
-    name: 'Ice Wolf',
+    id: 'frost_wolf',
+    name: 'Frost Wolf',
     emoji: '',
     level: 35,
     baseStats: {
-      health: 600,
-      damage: 110,
-      armor: 65,
-      speed: 16
+      health: 2100,
+      damage: 125,
+      armor: 30,
+      speed: 22
     },
     biomes: ['tundra'],
     rarity: 'common',
     lootTable: [
-      { itemId: 'ice_pelt', chance: 0.4 },
-      { itemId: 'frost_essence', chance: 0.3 }
+      { itemId: 'frost_pelt', chance: 0.5 },
+      { itemId: 'ice_crystal', chance: 0.3 }
     ]
   },
   {
-    id: 'frost_wraith',
-    name: 'Frost Wraith',
+    id: 'ice_elemental',
+    name: 'Ice Elemental',
     emoji: '',
     level: 36,
     baseStats: {
-      health: 520,
-      damage: 115,
-      armor: 55,
+      health: 2160,
+      damage: 130,
+      armor: 25,
       speed: 18
     },
     biomes: ['tundra'],
     rarity: 'common',
     lootTable: [
-      { itemId: 'frost_essence', chance: 0.45 },
-      { itemId: 'spectral_ice', chance: 0.25 },
-      { itemId: 'mana_potion', chance: 0.2 }
+      { itemId: 'elemental_ice', chance: 0.4 },
+      { itemId: 'frozen_essence', chance: 0.35 },
+      { itemId: 'mana_potion', chance: 0.25 }
     ]
   },
   {
-    id: 'ice_troll',
-    name: 'Ice Troll',
+    id: 'yeti',
+    name: 'Yeti',
     emoji: '',
     level: 37,
     baseStats: {
-      health: 800,
-      damage: 125,
-      armor: 85,
-      speed: 8
+      health: 2220,
+      damage: 120,
+      armor: 40,
+      speed: 14
     },
     biomes: ['tundra'],
-    rarity: 'common',
+    rarity: 'uncommon',
     lootTable: [
-      { itemId: 'frozen_bone', chance: 0.4 },
-      { itemId: 'ice_essence', chance: 0.3 },
-      { itemId: 'strength_potion', chance: 0.15 }
+      { itemId: 'yeti_fur', chance: 0.5 },
+      { itemId: 'giant_claw', chance: 0.3 },
+      { itemId: 'strength_potion', chance: 0.2 }
     ]
   },
   {
@@ -70,91 +84,94 @@ export const frozenWastesMonsters: WildernessMonster[] = [
     emoji: '',
     level: 38,
     baseStats: {
-      health: 1000,
+      health: 2280,
       damage: 140,
-      armor: 90,
-      speed: 6
+      armor: 35,
+      speed: 12
     },
     biomes: ['tundra'],
     rarity: 'uncommon',
     lootTable: [
-      { itemId: 'giant_bone', chance: 0.3 },
-      { itemId: 'ice_gem', chance: 0.2 }
-    ]
-  },
-  {
-    id: 'arctic_bear',
-    name: 'Arctic Bear',
-    emoji: '',
-    level: 39,
-    baseStats: {
-      health: 900,
-      damage: 135,
-      armor: 80,
-      speed: 10
-    },
-    biomes: ['tundra'],
-    rarity: 'uncommon',
-    lootTable: [
-      { itemId: 'arctic_fur', chance: 0.4 },
-      { itemId: 'bear_claw', chance: 0.25 },
-      { itemId: 'ice_essence', chance: 0.3 }
+      { itemId: 'giant_bone', chance: 0.4 },
+      { itemId: 'frost_gem', chance: 0.3 },
+      { itemId: 'ice_armor_shard', chance: 0.2 }
     ]
   },
   {
     id: 'ice_dragon',
     name: 'Ice Dragon',
     emoji: '',
-    level: 40,
+    level: 39,
     baseStats: {
-      health: 1200,
-      damage: 160,
-      armor: 100,
-      speed: 12
+      health: 2340,
+      damage: 145,
+      armor: 45,
+      speed: 16
     },
     biomes: ['tundra'],
     rarity: 'rare',
     lootTable: [
-      { itemId: 'ice_dragon_scale', chance: 0.15 },
-      { itemId: 'frozen_heart', chance: 0.1 },
-      { itemId: 'legendary_gem', chance: 0.08 }
+      { itemId: 'dragon_ice', chance: 0.6 },
+      { itemId: 'ice_scale', chance: 0.4 },
+      { itemId: 'rare_gem', chance: 0.3 }
     ]
   },
   {
-    id: 'blizzard_elemental',
-    name: 'Blizzard Elemental',
+    id: 'blizzard_wraith',
+    name: 'Blizzard Wraith',
+    emoji: '',
+    level: 40,
+    baseStats: {
+      health: 2200,
+      damage: 160,
+      armor: 20,
+      speed: 28
+    },
+    biomes: ['tundra'],
+    rarity: 'rare',
+    lootTable: [
+      { itemId: 'wraith_essence', chance: 0.5 },
+      { itemId: 'blizzard_core', chance: 0.35 },
+      { itemId: 'speed_potion', chance: 0.25 }
+    ]
+  },
+  {
+    id: 'frost_lich',
+    name: 'Frost Lich',
+    emoji: '',
+    level: 41,
+    baseStats: {
+      health: 2460,
+      damage: 155,
+      armor: 35,
+      speed: 20
+    },
+    biomes: ['tundra'],
+    rarity: 'rare',
+    lootTable: [
+      { itemId: 'lich_crown', chance: 0.4 },
+      { itemId: 'frozen_soul', chance: 0.35 },
+      { itemId: 'legendary_potion', chance: 0.3 }
+    ]
+  },
+  {
+    id: 'ancient_glacier',
+    name: 'Ancient Glacier',
     emoji: '',
     level: 42,
     baseStats: {
-      health: 800,
+      health: 2520,
       damage: 150,
-      armor: 70,
-      speed: 14
-    },
-    biomes: ['tundra'],
-    rarity: 'rare',
-    lootTable: [
-      { itemId: 'blizzard_core', chance: 0.35 },
-      { itemId: 'ice_essence', chance: 0.4 }
-    ]
-  },
-  {
-    id: 'winter_king',
-    name: 'Winter King',
-    emoji: '',
-    level: 45,
-    baseStats: {
-      health: 1500,
-      damage: 180,
-      armor: 120,
+      armor: 50,
       speed: 8
     },
     biomes: ['tundra'],
     rarity: 'elite',
     lootTable: [
-      { itemId: 'winter_crown', chance: 0.1 },
-      { itemId: 'eternal_ice', chance: 0.15 },
-      { itemId: 'king_scepter', chance: 0.12 }
+      { itemId: 'glacier_heart', chance: 0.8 },
+      { itemId: 'eternal_ice', chance: 0.6 },
+      { itemId: 'legendary_gem', chance: 0.5 },
+      { itemId: 'full_heal_potion', chance: 0.4 }
     ]
   }
 ];

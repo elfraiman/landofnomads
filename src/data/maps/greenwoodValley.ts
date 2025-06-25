@@ -6,6 +6,20 @@ const findItemByName = (name: string) => {
   return baseItems.find(item => item.name === name);
 };
 
+// Merchant inventory for Greenwood Valley
+export const greenwoodValleyMerchantInventory = [
+  'Iron Sword',
+  'Steel Blade',
+  'Knight\'s Blade',
+  'Padded Undershirt',
+  'Fine Chain Mail',
+  'Guardian Shield',
+  'Leather Boots',
+  'Hunting Bow',
+  'Silver Ring',
+  'Ring of Power'
+];
+
 // ===== GREENWOOD VALLEY (Levels 1-8) =====
 export const greenwoodValleyMonsters: WildernessMonster[] = [
   {
@@ -14,8 +28,8 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 1,
     baseStats: {
-      health: 45,
-      damage: 3,
+      health: 80,
+      damage: 4,
       armor: 1,
       speed: 8
     },
@@ -32,15 +46,16 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 2,
     baseStats: {
-      health: 65,
-      damage: 5,
+      health: 120,
+      damage: 7,
       armor: 2,
       speed: 6
     },
     biomes: ['forest', 'mountains'],
     rarity: 'common',
     lootTable: [
-      { itemId: 'rusty_dagger', chance: 0.15 },
+      { itemId: 'goblin_ear', chance: 0.4 },
+      { itemId: 'iron_dagger', chance: 0.15 },
       { itemId: 'health_potion', chance: 0.2 }
     ]
   },
@@ -50,15 +65,16 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 3,
     baseStats: {
-      health: 85,
-      damage: 8,
+      health: 160,
+      damage: 10,
       armor: 3,
-      speed: 10
+      speed: 12
     },
     biomes: ['forest', 'mountains'],
     rarity: 'common',
     lootTable: [
-      { itemId: 'wolf_pelt', chance: 0.3 },
+      { itemId: 'wolf_pelt', chance: 0.5 },
+      { itemId: 'wolf_fang', chance: 0.3 },
       { itemId: 'health_potion', chance: 0.15 }
     ]
   },
@@ -68,17 +84,17 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 4,
     baseStats: {
-      health: 105,
-      damage: 10,
+      health: 200,
+      damage: 12,
       armor: 4,
-      speed: 7
+      speed: 10
     },
-    biomes: ['forest', 'underground'],
+    biomes: ['forest'],
     rarity: 'uncommon',
     lootTable: [
-      { itemId: 'spider_silk', chance: 0.35 },
-      { itemId: 'poison_vial', chance: 0.2 },
-      { itemId: 'health_potion', chance: 0.25 }
+      { itemId: 'spider_silk', chance: 0.6 },
+      { itemId: 'poison_sac', chance: 0.3 },
+      { itemId: 'mana_potion', chance: 0.2 }
     ]
   },
   {
@@ -87,17 +103,17 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 5,
     baseStats: {
-      health: 125,
-      damage: 12,
+      health: 250,
+      damage: 15,
       armor: 6,
-      speed: 5
+      speed: 8
     },
     biomes: ['forest', 'mountains'],
     rarity: 'uncommon',
     lootTable: [
-      { itemId: 'iron_sword', chance: 0.12 },
-      { itemId: 'leather_armor', chance: 0.1 },
-      { itemId: 'health_potion', chance: 0.3 }
+      { itemId: 'orc_tusk', chance: 0.4 },
+      { itemId: 'iron_sword', chance: 0.2 },
+      { itemId: 'leather_armor', chance: 0.15 }
     ]
   },
   {
@@ -106,17 +122,17 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 6,
     baseStats: {
-      health: 145,
-      damage: 14,
-      armor: 5,
-      speed: 12
+      health: 300,
+      damage: 18,
+      armor: 4,
+      speed: 15
     },
     biomes: ['forest'],
-    rarity: 'uncommon',
+    rarity: 'rare',
     lootTable: [
-      { itemId: 'wisp_essence', chance: 0.4 },
-      { itemId: 'mana_potion', chance: 0.25 },
-      { itemId: 'health_potion', chance: 0.2 }
+      { itemId: 'wisp_essence', chance: 0.5 },
+      { itemId: 'magic_crystal', chance: 0.3 },
+      { itemId: 'mana_potion', chance: 0.4 }
     ]
   },
   {
@@ -125,17 +141,17 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 7,
     baseStats: {
-      health: 165,
-      damage: 16,
+      health: 400,
+      damage: 22,
       armor: 8,
-      speed: 4
+      speed: 10
     },
     biomes: ['forest', 'mountains'],
     rarity: 'rare',
     lootTable: [
-      { itemId: 'bear_claw', chance: 0.3 },
-      { itemId: 'thick_hide', chance: 0.25 },
-      { itemId: 'health_potion', chance: 0.35 }
+      { itemId: 'bear_claw', chance: 0.6 },
+      { itemId: 'bear_hide', chance: 0.4 },
+      { itemId: 'strength_potion', chance: 0.3 }
     ]
   },
   {
@@ -144,18 +160,18 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 8,
     baseStats: {
-      health: 185,
-      damage: 18,
+      health: 500,
+      damage: 25,
       armor: 10,
-      speed: 3
+      speed: 12
     },
     biomes: ['forest'],
     rarity: 'elite',
     lootTable: [
-      { itemId: 'guardian_bark', chance: 0.5 },
-      { itemId: 'nature_gem', chance: 0.15 },
-      { itemId: 'health_potion', chance: 0.4 },
-      { itemId: 'mana_potion', chance: 0.2 }
+      { itemId: 'guardian_core', chance: 0.8 },
+      { itemId: 'enchanted_wood', chance: 0.5 },
+      { itemId: 'rare_gem', chance: 0.3 },
+      { itemId: 'full_heal_potion', chance: 0.4 }
     ]
   }
 ];

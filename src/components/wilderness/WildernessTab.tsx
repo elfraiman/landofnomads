@@ -6,6 +6,7 @@ import { BattleResultsModal } from '../combat/BattleResultsModal';
 import { useCustomAlert } from '../ui/CustomAlert';
 import { Colors, ColorUtils } from '../../utils/colors';
 import { PortalModal } from './PortalModal';
+import { MerchantModal } from './MerchantModal';
 import { getTileEmoji } from '../../data/wilderness';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -18,6 +19,12 @@ export const WildernessTab: React.FC = () => {
   const [battleResult, setBattleResult] = useState<DetailedBattleResult | null>(null);
   const [showBattleResults, setShowBattleResults] = useState(false);
   const [showPortalModal, setShowPortalModal] = useState(false);
+  const [showMerchantModal, setShowMerchantModal] = useState(false);
+  const [selectedMerchant, setSelectedMerchant] = useState<{
+    name: string;
+    description: string;
+    mapId: string;
+  } | null>(null);
   const { showAlert } = useCustomAlert();
 
   if (!wildernessState || !currentCharacter) {
@@ -64,12 +71,36 @@ export const WildernessTab: React.FC = () => {
       // Check if this tile has a portal
       const hasPortal = tile.features?.some(feature => feature.type === 'portal' && feature.isActive);
 
+      // Check if this tile has a merchant
+      const hasMerchant = tile.type === 'merchant' || tile.npcs?.some(npc => npc.type === 'merchant');
+
       if (hasPortal) {
         showAlert(
           tile.name,
           `${tile.description}\n\nSpawn Rate: ${Math.round(tile.spawnRate * 100)}%\nLevel Range: ${tile.minLevel}-${tile.maxLevel}\nMonsters: ${monsterCount}\n\n🌀 Portal Hub Available!`,
           [
             { text: 'Use Portal', style: 'default', onPress: () => setShowPortalModal(true) },
+            { text: 'Close', style: 'cancel' }
+          ]
+        );
+      } else if (hasMerchant) {
+        const merchant = tile.npcs?.find(npc => npc.type === 'merchant');
+        showAlert(
+          tile.name,
+          `${tile.description}\n\nSpawn Rate: ${Math.round(tile.spawnRate * 100)}%\nLevel Range: ${tile.minLevel}-${tile.maxLevel}\nMonsters: ${monsterCount}\n\n🏪 Merchant Available!`,
+          [
+            {
+              text: 'Visit Merchant',
+              style: 'default',
+              onPress: () => {
+                setSelectedMerchant({
+                  name: merchant?.name || tile.name,
+                  description: merchant?.dialogue[0] || 'A traveling merchant with quality goods.',
+                  mapId: currentMap.id
+                });
+                setShowMerchantModal(true);
+              }
+            },
             { text: 'Close', style: 'cancel' }
           ]
         );
@@ -372,6 +403,38 @@ export const WildernessTab: React.FC = () => {
         </View>
       )}
 
+      {/* Merchant Section - Show when on a merchant tile */}
+      {(currentTile.type === 'merchant' || currentTile.npcs?.some(npc => npc.type === 'merchant')) && (
+        <View style={styles.merchantSection}>
+          <Text style={styles.merchantSectionTitle}>🏪 Merchant</Text>
+          <Text style={styles.merchantDescription}>
+            A traveling merchant has set up shop here with goods suited to this region. Browse their wares to find equipment perfect for the challenges ahead!
+          </Text>
+          <Text style={styles.playerLevelText}>
+            Your Level: {currentCharacter?.level || 1} | Higher level items available!
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.merchantButton, (isMoving || isFighting) && styles.merchantButtonDisabled]}
+            onPress={() => {
+              const merchant = currentTile.npcs?.find(npc => npc.type === 'merchant');
+              setSelectedMerchant({
+                name: merchant?.name || currentTile.name,
+                description: merchant?.dialogue[0] || 'A traveling merchant with quality goods.',
+                mapId: currentMap.id
+              });
+              setShowMerchantModal(true);
+            }}
+            disabled={isMoving || isFighting}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.merchantButtonText, (isMoving || isFighting) && styles.merchantButtonTextDisabled]}>
+              🏪 Browse Wares
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Current Tile Monsters */}
       <View style={styles.monstersSection}>
         {currentTile.spawnedMonsters.filter(m => m.isAlive).length > 0 ? (
@@ -445,6 +508,10 @@ export const WildernessTab: React.FC = () => {
             <Text style={styles.legendEmoji}>🌀</Text>
             <Text style={styles.legendText}>Portal</Text>
           </View>
+          <View style={styles.legendItem}>
+            <Text style={styles.legendEmoji}>🏪</Text>
+            <Text style={styles.legendText}>Merchant</Text>
+          </View>
         </View>
       </View>
 
@@ -501,6 +568,21 @@ export const WildernessTab: React.FC = () => {
         onClose={() => setShowPortalModal(false)}
         canAccessMap={canAccessMap}
       />
+
+      {/* Merchant Modal */}
+      {selectedMerchant && (
+        <MerchantModal
+          visible={showMerchantModal}
+          merchantName={selectedMerchant.name}
+          merchantDescription={selectedMerchant.description}
+          mapId={selectedMerchant.mapId}
+          playerLevel={currentCharacter?.level || 1}
+          onClose={() => {
+            setShowMerchantModal(false);
+            setSelectedMerchant(null);
+          }}
+        />
+      )}
     </ScrollView>
   );
 };
@@ -905,5 +987,57 @@ const styles = StyleSheet.create({
   },
   tileWrapper: {
     position: 'relative'
-  }
+  },
+  merchantSection: {
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.accent,
+    shadowColor: Colors.accent,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  merchantSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.accent,
+    marginBottom: 8,
+    textAlign: 'center'
+  },
+  merchantDescription: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 20
+  },
+  merchantButton: {
+    backgroundColor: Colors.accent,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.accent,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  merchantButtonDisabled: {
+    backgroundColor: Colors.surfaceElevated,
+    shadowOpacity: 0.1,
+  },
+  merchantButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  merchantButtonTextDisabled: {
+    color: Colors.textMuted,
+  },
 }); 

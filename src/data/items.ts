@@ -2173,4 +2173,84 @@ export const generateStarterEquipment = (): Item[] => {
   const starterBoots = generateItem(baseItems.find(item => item.name === 'Leather Boots')!, 1);
 
   return [starterWeapon, starterArmor, starterBoots];
+};
+
+// Generate map-specific inventory for merchants
+export const generateMapSpecificInventory = (mapId: string, playerLevel: number): Item[] => {
+  const inventory: Item[] = [];
+  const itemCount = Math.min(5 + Math.floor(playerLevel / 3), 10); // 5-10 items based on player level
+
+  // Define map-specific item preferences
+  const mapPreferences: Record<string, {
+    preferredTypes: ItemType[];
+    preferredRarities: ItemRarity[];
+    levelRange: { min: number; max: number };
+    specialItems?: string[]; // Specific item names that are more common in this map
+  }> = {
+    'greenwood_valley': {
+      preferredTypes: ['weapon', 'armor', 'boots'],
+      preferredRarities: ['common', 'uncommon', 'rare'],
+      levelRange: { min: Math.max(1, playerLevel - 2), max: playerLevel + 3 },
+      specialItems: ['Iron Sword', 'Knight\'s Blade', 'Leather Armor', 'Chainmail']
+    },
+    'shadowmere_swamps': {
+      preferredTypes: ['weapon', 'armor', 'accessory'],
+      preferredRarities: ['uncommon', 'rare', 'epic'],
+      levelRange: { min: Math.max(8, playerLevel - 1), max: playerLevel + 5 },
+      specialItems: ['Poison Blade', 'Assassin\'s Dagger', 'Swamp Walker Boots', 'Toxic Cloak']
+    },
+    'crystal_caverns': {
+      preferredTypes: ['weapon', 'armor', 'accessory'],
+      preferredRarities: ['rare', 'epic', 'legendary'],
+      levelRange: { min: Math.max(15, playerLevel - 1), max: playerLevel + 7 },
+      specialItems: ['Crystal Wand', 'Mystic Staff', 'Dragon Heart Pendant', 'Philosopher\'s Stone']
+    },
+    'volcanic_peaks': {
+      preferredTypes: ['weapon', 'armor', 'boots'],
+      preferredRarities: ['epic', 'legendary'],
+      levelRange: { min: Math.max(22, playerLevel - 1), max: playerLevel + 8 },
+      specialItems: ['Staff of Eternal Fire', 'Dragonbone Sword', 'Phoenix Feather Cloak', 'Molten Boots']
+    },
+    'frozen_wastes': {
+      preferredTypes: ['weapon', 'armor', 'accessory'],
+      preferredRarities: ['epic', 'legendary'],
+      levelRange: { min: Math.max(32, playerLevel - 1), max: playerLevel + 10 },
+      specialItems: ['Excalibur', 'Soul Reaper', 'Icebound Plate', 'Frost Giant\'s Gauntlets']
+    }
+  };
+
+  const preferences = mapPreferences[mapId] || mapPreferences['greenwood_valley'];
+
+  for (let i = 0; i < itemCount; i++) {
+    // Determine if we should use a special item (30% chance)
+    if (preferences.specialItems && Math.random() < 0.3) {
+      const specialItemName = preferences.specialItems[Math.floor(Math.random() * preferences.specialItems.length)];
+      const specialItem = baseItems.find(item => item.name === specialItemName);
+
+      if (specialItem) {
+        const level = Math.floor(Math.random() * (preferences.levelRange.max - preferences.levelRange.min + 1)) + preferences.levelRange.min;
+        inventory.push(generateItem(specialItem, level));
+        continue;
+      }
+    }
+
+    // Filter items by map preferences
+    const suitableItems = baseItems.filter(item =>
+      preferences.preferredTypes.includes(item.type) &&
+      preferences.preferredRarities.includes(item.rarity)
+    );
+
+    if (suitableItems.length > 0) {
+      const randomItem = suitableItems[Math.floor(Math.random() * suitableItems.length)];
+      const level = Math.floor(Math.random() * (preferences.levelRange.max - preferences.levelRange.min + 1)) + preferences.levelRange.min;
+      inventory.push(generateItem(randomItem, level));
+    }
+  }
+
+  // Remove duplicates (keep first occurrence)
+  const uniqueInventory = inventory.filter((item, index, arr) =>
+    arr.findIndex(i => i.name === item.name) === index
+  );
+
+  return uniqueInventory;
 }; 

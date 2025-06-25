@@ -72,6 +72,11 @@ interface GameContextType {
   loadGame: () => Promise<void>;
   debugSaveData: () => Promise<void>;
 
+  // Experience system
+  getExperienceForLevel: (level: number) => number;
+  getExperiencePercentage: (character?: Character) => number;
+  getExperienceToNextLevel: (character?: Character) => number;
+
   // Utilities
   isLoading: boolean;
   error: string | null;
@@ -777,8 +782,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       exploredTiles: newExploredTiles
     } : null);
 
-    // Save game after wilderness movement
-    setTimeout(() => saveGame(), 100);
+    // No auto-save on movement - let players save manually or on major events
   };
 
   const spawnMonsterOnTile = (tile: any): void => {
@@ -863,27 +867,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     for (const item of weightedMonsters) {
       random -= item.weight;
       if (random <= 0) return item.monster;
-    }
-
-    return monsters[0]; // Fallback
-  };
-
-  const selectRandomMonster = (monsters: any[]) => {
-    // Weighted selection based on rarity
-    const weights = {
-      common: 50,
-      uncommon: 30,
-      rare: 15,
-      elite: 4,
-      boss: 1
-    };
-
-    const totalWeight = monsters.reduce((sum, monster) => sum + (weights as any)[monster.rarity], 0);
-    let random = Math.random() * totalWeight;
-
-    for (const monster of monsters) {
-      random -= (weights as any)[monster.rarity];
-      if (random <= 0) return monster;
     }
 
     return monsters[0]; // Fallback
@@ -1583,6 +1566,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setTimeout(() => saveGame(), 100);
   };
 
+  // Experience system functions
+  const getExperienceForLevel = (level: number): number => {
+    return Math.floor(100 * Math.pow(1.5, level - 1));
+  };
+
+  const getExperiencePercentage = (character?: Character): number => {
+    const char = character || gameState.currentCharacter;
+    if (!char) return 0;
+    const nextLevelExp = getExperienceForLevel(char.level + 1);
+    const percentage = (char.experience / nextLevelExp) * 100;
+    return Math.max(0, Math.min(100, percentage)); // Clamp between 0-100
+  };
+
+  const getExperienceToNextLevel = (character?: Character): number => {
+    const char = character || gameState.currentCharacter;
+    if (!char) return 0;
+    const nextLevelExp = getExperienceForLevel(char.level + 1);
+    return Math.max(0, nextLevelExp - char.experience);
+  };
+
   const contextValue: GameContextType = {
     gameState,
     currentCharacter: gameState.currentCharacter || null,
@@ -1621,6 +1624,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     saveGame,
     loadGame,
     debugSaveData,
+    getExperienceForLevel,
+    getExperiencePercentage,
+    getExperienceToNextLevel,
     isLoading,
     error
   };

@@ -7,12 +7,12 @@ import TrainingTab from '../components/character/TrainingTab';
 import CombatTab from '../components/combat/CombatTab';
 import EquipmentTab from '../components/character/EquipmentTab';
 import InventoryTab from '../components/character/InventoryTab';
-import ShopTab from '../components/shop/ShopTab';
+
 import { WildernessTab } from '../components/wilderness/WildernessTab';
 import LevelUpModal from '../components/character/LevelUpModal';
 import { NotificationSystem } from '../components/ui/NotificationSystem';
 
-type TabType = 'stats' | 'training' | 'combat' | 'equipment' | 'inventory' | 'shop' | 'wilderness';
+type TabType = 'stats' | 'training' | 'combat' | 'equipment' | 'inventory' | 'wilderness';
 
 interface GameScreenProps {
   onLogout: () => void;
@@ -42,7 +42,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
     { id: 'combat' as TabType, label: 'Combat', emoji: '' },
     { id: 'equipment' as TabType, label: 'Equipment', emoji: '' },
     { id: 'inventory' as TabType, label: 'Inventory', emoji: '' },
-    { id: 'shop' as TabType, label: 'Shop', emoji: '' },
     { id: 'wilderness' as TabType, label: 'Wilderness', emoji: '' },
   ];
 
@@ -83,8 +82,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
         return <EquipmentTab character={currentCharacter} />;
       case 'inventory':
         return <InventoryTab character={currentCharacter} />;
-      case 'shop':
-        return <ShopTab character={currentCharacter} />;
       case 'wilderness':
         return <WildernessTab />;
       default:

@@ -95,7 +95,8 @@ export type TileType =
   | 'ruins'
   | 'village'
   | 'road'
-  | 'portal'; // New portal tile type
+  | 'portal'
+  | 'merchant'; // New merchant tile type
 
 export type BiomeType =
   | 'plains'

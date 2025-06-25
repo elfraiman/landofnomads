@@ -1,5 +1,11 @@
 import { WildernessMap, WildernessMonster, WildernessTile, TileType, BiomeType, PlayerPosition, SpawnedMonster } from '../types/wilderness';
-import { baseItems } from './items';
+import { baseItems, generateItem } from './items';
+import { Item } from '../types';
+import { greenwoodValleyMerchantInventory } from './maps/greenwoodValley';
+import { shadowmereSwampsMerchantInventory } from './maps/shadowmereSwamps';
+import { crystalCavernsMerchantInventory } from './maps/crystalCaverns';
+import { volcanicPeaksMerchantInventory } from './maps/volcanicPeaks';
+import { frozenWastesMerchantInventory } from './maps/frozenWastes';
 
 // Import monsters from individual map files
 import { greenwoodValleyMonsters } from './maps/greenwoodValley';
@@ -126,8 +132,9 @@ export const getTileEmoji = (type: TileType): string => {
     cave: '🕳️',
     ruins: '🏛️',
     village: '🏘️',
-    road: '🛤️',
-    portal: '🌀'
+    road: '��️',
+    portal: '🌀',
+    merchant: '🏪'
   };
   return emojiMap[type] || '❓';
 };
@@ -319,6 +326,11 @@ const generateTileDescription = (type: TileType, name: string): string => {
       'A swirling vortex of magical energy connects distant realms.',
       'Ancient runes glow around a mystical gateway.',
       'Reality bends and warps around this dimensional portal.'
+    ],
+    merchant: [
+      'A traveling merchant has set up shop here.',
+      'Exotic goods and rare equipment are sold by a friendly trader.',
+      'A merchant\'s stall offers wares suited to this region.'
     ]
   };
 
@@ -378,7 +390,7 @@ export const createWildernessMap = (mapConfig: MapConfig): WildernessMap => {
           isActive: true,
           data: { availableMaps: mapConfigs.map(m => m.id) }
         }] : undefined,
-        // Add NPCs to villages
+        // Add NPCs to villages and merchants
         npcs: terrain.type === 'village' ? [{
           id: 'portal_keeper',
           name: 'Portal Keeper',
@@ -392,6 +404,21 @@ export const createWildernessMap = (mapConfig: MapConfig): WildernessMap => {
             id: 'portal_service',
             name: 'Portal Travel',
             type: 'portal',
+            cost: 0
+          }]
+        }] : terrain.type === 'merchant' ? [{
+          id: `merchant_${mapConfig.id}_${x}_${y}`,
+          name: terrain.name,
+          type: 'merchant',
+          dialogue: [
+            'Welcome, adventurer! I have the finest gear for these lands.',
+            'Looking for something specific? I might have just what you need.',
+            'These items are perfectly suited for the dangers ahead!'
+          ],
+          services: [{
+            id: 'merchant_shop',
+            name: 'Browse Wares',
+            type: 'shop',
             cost: 0
           }]
         }] : undefined
@@ -432,7 +459,7 @@ const getGreenwoodTerrain = (x: number, y: number) => {
 
   // Use similar layout to original starter map
   const layout = [
-    [{ type: 'mountain', name: 'Rocky Peak', spawnRate: 0.4 }, { type: 'mountain', name: 'Stone Cliffs', spawnRate: 0.3 }, { type: 'cave', name: 'Dark Cave', spawnRate: 0.6 }, { type: 'mountain', name: 'High Ridge', spawnRate: 0.3 }],
+    [{ type: 'mountain', name: 'Rocky Peak', spawnRate: 0.4 }, { type: 'mountain', name: 'Stone Cliffs', spawnRate: 0.3 }, { type: 'cave', name: 'Dark Cave', spawnRate: 0.6 }, { type: 'merchant', name: 'Mountain Trader', spawnRate: 0.0 }],
     [{ type: 'forest', name: 'Pine Woods', spawnRate: 0.3 }, { type: 'forest', name: 'Dense Forest', spawnRate: 0.4 }, { type: 'forest', name: 'Ancient Grove', spawnRate: 0.3 }, { type: 'ruins', name: 'Old Ruins', spawnRate: 0.5 }],
     [{ type: 'grass', name: 'Green Meadow', spawnRate: 0.2 }, { type: 'village', name: 'Starting Village', spawnRate: 0.0 }, { type: 'grass', name: 'Peaceful Field', spawnRate: 0.2 }, { type: 'road', name: 'Trade Route', spawnRate: 0.1 }],
     [{ type: 'grass', name: 'Rolling Hills', spawnRate: 0.2 }, { type: 'forest', name: 'Young Forest', spawnRate: 0.3 }, { type: 'water', name: 'Crystal Lake', spawnRate: 0.1 }, { type: 'grass', name: 'Flower Field', spawnRate: 0.2 }],
@@ -459,7 +486,7 @@ const getSwampTerrain = (x: number, y: number) => {
   const layout = [
     [{ type: 'water', name: 'Murky Bog', spawnRate: 0.6 }, { type: 'forest', name: 'Twisted Trees', spawnRate: 0.5 }, { type: 'water', name: 'Stagnant Pool', spawnRate: 0.7 }, { type: 'forest', name: 'Gnarled Grove', spawnRate: 0.5 }],
     [{ type: 'water', name: 'Misty Marsh', spawnRate: 0.6 }, { type: 'water', name: 'Deep Swamp', spawnRate: 0.7 }, { type: 'ruins', name: 'Sunken Ruins', spawnRate: 0.8 }, { type: 'water', name: 'Witch\'s Pool', spawnRate: 0.9 }],
-    [{ type: 'forest', name: 'Moss-covered Path', spawnRate: 0.4 }, { type: 'village', name: 'Swamp Settlement', spawnRate: 0.0 }, { type: 'water', name: 'Toxic Pond', spawnRate: 0.6 }, { type: 'forest', name: 'Willow Grove', spawnRate: 0.5 }],
+    [{ type: 'merchant', name: 'Swamp Merchant', spawnRate: 0.0 }, { type: 'village', name: 'Swamp Settlement', spawnRate: 0.0 }, { type: 'water', name: 'Toxic Pond', spawnRate: 0.6 }, { type: 'forest', name: 'Willow Grove', spawnRate: 0.5 }],
     [{ type: 'water', name: 'Crocodile Lair', spawnRate: 0.8 }, { type: 'forest', name: 'Hanging Vines', spawnRate: 0.5 }, { type: 'water', name: 'Bubbling Marsh', spawnRate: 0.7 }, { type: 'ruins', name: 'Ancient Altar', spawnRate: 0.6 }],
     [{ type: 'water', name: 'Deadly Bog', spawnRate: 0.9 }, { type: 'forest', name: 'Poisonous Grove', spawnRate: 0.7 }, { type: 'water', name: 'Dragon\'s Lair', spawnRate: 1.0 }, { type: 'ruins', name: 'Portal Chamber', spawnRate: 0.0 }]
   ];
@@ -483,7 +510,7 @@ const getCavernTerrain = (x: number, y: number) => {
   const layout = [
     [{ type: 'cave', name: 'Crystal Chamber', spawnRate: 0.7 }, { type: 'cave', name: 'Glowing Tunnel', spawnRate: 0.6 }, { type: 'ruins', name: 'Ancient Gallery', spawnRate: 0.8 }, { type: 'cave', name: 'Gem Cavern', spawnRate: 0.7 }],
     [{ type: 'cave', name: 'Shadow Passage', spawnRate: 0.8 }, { type: 'ruins', name: 'Mystic Shrine', spawnRate: 0.9 }, { type: 'cave', name: 'Echo Chamber', spawnRate: 0.7 }, { type: 'ruins', name: 'Lost Temple', spawnRate: 0.8 }],
-    [{ type: 'cave', name: 'Winding Path', spawnRate: 0.5 }, { type: 'village', name: 'Mining Outpost', spawnRate: 0.0 }, { type: 'cave', name: 'Stalactite Hall', spawnRate: 0.6 }, { type: 'cave', name: 'Underground Lake', spawnRate: 0.7 }],
+    [{ type: 'cave', name: 'Winding Path', spawnRate: 0.5 }, { type: 'village', name: 'Mining Outpost', spawnRate: 0.0 }, { type: 'merchant', name: 'Crystal Merchant', spawnRate: 0.0 }, { type: 'cave', name: 'Underground Lake', spawnRate: 0.7 }],
     [{ type: 'ruins', name: 'Forgotten Vault', spawnRate: 0.8 }, { type: 'cave', name: 'Narrow Crevice', spawnRate: 0.7 }, { type: 'cave', name: 'Crystal Garden', spawnRate: 0.8 }, { type: 'ruins', name: 'Guardian\'s Chamber', spawnRate: 0.9 }],
     [{ type: 'cave', name: 'Deep Abyss', spawnRate: 0.9 }, { type: 'ruins', name: 'Dragon\'s Hoard', spawnRate: 1.0 }, { type: 'cave', name: 'Final Depths', spawnRate: 0.8 }, { type: 'ruins', name: 'Portal Nexus', spawnRate: 0.0 }]
   ];
@@ -507,7 +534,7 @@ const getVolcanicTerrain = (x: number, y: number) => {
   const layout = [
     [{ type: 'mountain', name: 'Smoking Peak', spawnRate: 0.8 }, { type: 'cave', name: 'Lava Tube', spawnRate: 0.9 }, { type: 'mountain', name: 'Molten Ridge', spawnRate: 0.8 }, { type: 'cave', name: 'Fire Cavern', spawnRate: 0.9 }],
     [{ type: 'mountain', name: 'Ash Fields', spawnRate: 0.7 }, { type: 'mountain', name: 'Volcanic Slope', spawnRate: 0.8 }, { type: 'ruins', name: 'Burnt Temple', spawnRate: 0.9 }, { type: 'mountain', name: 'Cinder Cone', spawnRate: 0.8 }],
-    [{ type: 'mountain', name: 'Rocky Outcrop', spawnRate: 0.6 }, { type: 'village', name: 'Fire Fortress', spawnRate: 0.0 }, { type: 'mountain', name: 'Lava Flow', spawnRate: 0.8 }, { type: 'cave', name: 'Magma Chamber', spawnRate: 0.9 }],
+    [{ type: 'mountain', name: 'Rocky Outcrop', spawnRate: 0.6 }, { type: 'village', name: 'Fire Fortress', spawnRate: 0.0 }, { type: 'mountain', name: 'Lava Flow', spawnRate: 0.8 }, { type: 'merchant', name: 'Fire Merchant', spawnRate: 0.0 }],
     [{ type: 'cave', name: 'Steam Vents', spawnRate: 0.8 }, { type: 'mountain', name: 'Obsidian Cliffs', spawnRate: 0.8 }, { type: 'ruins', name: 'Fire Lord\'s Throne', spawnRate: 1.0 }, { type: 'mountain', name: 'Sulfur Peaks', spawnRate: 0.8 }],
     [{ type: 'cave', name: 'Infernal Depths', spawnRate: 0.9 }, { type: 'mountain', name: 'Volcano Heart', spawnRate: 1.0 }, { type: 'ruins', name: 'Lord\'s Chamber', spawnRate: 1.0 }, { type: 'ruins', name: 'Portal of Fire', spawnRate: 0.0 }]
   ];
@@ -532,7 +559,7 @@ const getFrozenTerrain = (x: number, y: number) => {
     [{ type: 'mountain', name: 'Frozen Peak', spawnRate: 0.8 }, { type: 'water', name: 'Ice Lake', spawnRate: 0.7 }, { type: 'mountain', name: 'Glacier Wall', spawnRate: 0.8 }, { type: 'cave', name: 'Ice Cave', spawnRate: 0.9 }],
     [{ type: 'water', name: 'Frozen Tundra', spawnRate: 0.7 }, { type: 'mountain', name: 'Snow Drifts', spawnRate: 0.8 }, { type: 'ruins', name: 'Ice Palace', spawnRate: 0.9 }, { type: 'water', name: 'Blizzard Fields', spawnRate: 0.8 }],
     [{ type: 'mountain', name: 'Icy Slopes', spawnRate: 0.6 }, { type: 'village', name: 'Ice Fortress', spawnRate: 0.0 }, { type: 'water', name: 'Frozen Marsh', spawnRate: 0.7 }, { type: 'mountain', name: 'Crystal Spires', spawnRate: 0.8 }],
-    [{ type: 'water', name: 'Permafrost', spawnRate: 0.8 }, { type: 'mountain', name: 'Avalanche Zone', spawnRate: 0.8 }, { type: 'ruins', name: 'Giant\'s Hall', spawnRate: 1.0 }, { type: 'cave', name: 'Frost Cavern', spawnRate: 0.9 }],
+    [{ type: 'merchant', name: 'Ice Merchant', spawnRate: 0.0 }, { type: 'mountain', name: 'Avalanche Zone', spawnRate: 0.8 }, { type: 'ruins', name: 'Giant\'s Hall', spawnRate: 1.0 }, { type: 'cave', name: 'Frost Cavern', spawnRate: 0.9 }],
     [{ type: 'mountain', name: 'Eternal Winter', spawnRate: 0.9 }, { type: 'water', name: 'Ice Throne', spawnRate: 1.0 }, { type: 'ruins', name: 'Frozen Palace', spawnRate: 1.0 }, { type: 'ruins', name: 'Portal of Ice', spawnRate: 0.0 }]
   ];
 
@@ -546,4 +573,52 @@ const getFrozenTerrain = (x: number, y: number) => {
     maxLevel,
     description: generateTileDescription(tile.type as TileType, tile.name)
   };
+};
+
+// Get merchant inventory for a specific map
+export const getMerchantInventory = (mapId: string, playerLevel: number): Item[] => {
+  const inventory: Item[] = [];
+
+  // Get map-specific merchant inventory
+  let mapItems: string[] = [];
+  switch (mapId) {
+    case 'greenwood_valley':
+      mapItems = greenwoodValleyMerchantInventory;
+      break;
+    case 'shadowmere_swamps':
+      mapItems = shadowmereSwampsMerchantInventory;
+      break;
+    case 'crystal_caverns':
+      mapItems = crystalCavernsMerchantInventory;
+      break;
+    case 'volcanic_peaks':
+      mapItems = volcanicPeaksMerchantInventory;
+      break;
+    case 'frozen_wastes':
+      mapItems = frozenWastesMerchantInventory;
+      break;
+    default:
+      mapItems = greenwoodValleyMerchantInventory; // fallback
+  }
+
+  // Generate 6-8 items from the map's merchant inventory
+  const itemCount = Math.min(6 + Math.floor(playerLevel / 5), 8);
+  const availableItems = [...mapItems]; // Copy array so we don't modify original
+
+  for (let i = 0; i < itemCount && availableItems.length > 0; i++) {
+    // Pick a random item from available items
+    const randomIndex = Math.floor(Math.random() * availableItems.length);
+    const itemName = availableItems.splice(randomIndex, 1)[0]; // Remove item so we don't duplicate
+
+    // Find the base item from items.ts
+    const baseItem = baseItems.find(item => item.name === itemName);
+    if (baseItem) {
+      // Generate item with appropriate level (player level ± 2)
+      const itemLevel = Math.max(1, playerLevel + Math.floor(Math.random() * 5) - 2);
+      const generatedItem = generateItem(baseItem, itemLevel);
+      inventory.push(generatedItem);
+    }
+  }
+
+  return inventory;
 }; 

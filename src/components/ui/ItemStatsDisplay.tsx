@@ -24,6 +24,17 @@ const getSlotColor = (item: Item) => {
   return Colors.secondary;
 };
 
+const getItemIcon = (item: Item) => {
+  if (item.type === 'weapon') {
+    if (item.handedness === 'two-handed') return '⚔️';
+    return '🗡️';
+  }
+  if (item.type === 'armor') return '🛡️';
+  if (item.type === 'boots') return '👢';
+  if (item.type === 'accessory') return '💍';
+  return '📦';
+};
+
 export const ItemStatsDisplay: React.FC<ItemStatsDisplayProps> = ({
   item,
   showSlotInfo = true,
@@ -39,113 +50,140 @@ export const ItemStatsDisplay: React.FC<ItemStatsDisplayProps> = ({
       {
         borderColor: rarityColor,
         shadowColor: rarityColor,
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        shadowOffset: { width: 0, height: 1 },
-        elevation: 3,
+        shadowOpacity: 0.4,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 6,
       }
     ]}>
-      {/* Header Row - Name, Level, Rarity, Slot */}
-      <View style={styles.headerRow}>
-        <View style={styles.nameSection}>
-          <Text style={[styles.itemName, { color: rarityColor }]} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={styles.itemLevel}>Lv.{item.level}</Text>
+      {/* Header Section */}
+      <View style={[styles.header, { backgroundColor: ColorUtils.withOpacity(rarityColor, 0.1) }]}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.itemIcon}>{getItemIcon(item)}</Text>
+          <View style={styles.titleSection}>
+            <Text style={[styles.itemName, { color: rarityColor }]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <View style={styles.subtitleRow}>
+              <Text style={styles.itemLevel}>Level {item.level}</Text>
+              {showSlotInfo && (
+                <>
+                  <Text style={styles.separator}>•</Text>
+                  <Text style={[styles.slotText, { color: slotColor }]}>
+                    {getSlotText(item)}
+                  </Text>
+                </>
+              )}
+            </View>
+          </View>
         </View>
 
-        <View style={styles.badgeSection}>
-          <View style={[styles.rarityBadge, { backgroundColor: ColorUtils.withOpacity(rarityColor, 0.15) }]}>
-            <Text style={[styles.rarityText, { color: rarityColor }]}>
-              {item.rarity.toUpperCase()}
-            </Text>
-          </View>
+        <View style={[styles.rarityBadge, { backgroundColor: rarityColor }]}>
+          <Text style={styles.rarityText}>{item.rarity.toUpperCase()}</Text>
+        </View>
+      </View>
 
-          {showSlotInfo && (
-            <View style={[styles.slotBadge, { backgroundColor: ColorUtils.withOpacity(slotColor, 0.15) }]}>
-              <Text style={[styles.slotText, { color: slotColor }]}>
-                {getSlotText(item)}
-              </Text>
+      {/* Main Stats Grid */}
+      <View style={styles.statsGrid}>
+        {/* Primary Stats Row */}
+        <View style={styles.primaryStatsRow}>
+          {item.damage && (
+            <View style={[styles.primaryStat, { backgroundColor: ColorUtils.withOpacity(Colors.weapon, 0.1) }]}>
+              <Text style={[styles.primaryStatValue, { color: Colors.weapon }]}>{item.damage}</Text>
+              <Text style={styles.primaryStatLabel}>Attack</Text>
+            </View>
+          )}
+
+          {item.armor && (
+            <View style={[styles.primaryStat, { backgroundColor: ColorUtils.withOpacity(Colors.armor, 0.1) }]}>
+              <Text style={[styles.primaryStatValue, { color: Colors.armor }]}>{item.armor}</Text>
+              <Text style={styles.primaryStatLabel}>Defense</Text>
+            </View>
+          )}
+
+          {item.weaponSpeed && (
+            <View style={[styles.primaryStat, { backgroundColor: ColorUtils.withOpacity(Colors.lightning, 0.1) }]}>
+              <Text style={[styles.primaryStatValue, { color: Colors.lightning }]}>{item.weaponSpeed}</Text>
+              <Text style={styles.primaryStatLabel}>Speed</Text>
             </View>
           )}
         </View>
-      </View>
 
-      {/* Main Stats Row */}
-      <View style={styles.mainStatsRow}>
-        {item.damage && (
-          <View style={styles.mainStat}>
-            <Text style={[styles.mainStatValue, { color: Colors.weapon }]}>{item.damage}</Text>
-            <Text style={styles.mainStatLabel}>ATK</Text>
-          </View>
-        )}
-
-        {item.armor && (
-          <View style={styles.mainStat}>
-            <Text style={[styles.mainStatValue, { color: Colors.armor }]}>{item.armor}</Text>
-            <Text style={styles.mainStatLabel}>DEF</Text>
-          </View>
-        )}
-
-        {item.weaponSpeed && (
-          <View style={styles.mainStat}>
-            <Text style={[styles.mainStatValue, { color: Colors.lightning }]}>{item.weaponSpeed}</Text>
-            <Text style={styles.mainStatLabel}>SPD</Text>
-          </View>
-        )}
-
-        {item.criticalChance && (
-          <View style={styles.mainStat}>
-            <Text style={[styles.mainStatValue, { color: Colors.criticalDamage }]}>{item.criticalChance}%</Text>
-            <Text style={styles.mainStatLabel}>CRIT</Text>
-          </View>
-        )}
-
-        {item.dodgeChance && (
-          <View style={styles.mainStat}>
-            <Text style={[styles.mainStatValue, { color: Colors.dodge }]}>{item.dodgeChance}%</Text>
-            <Text style={styles.mainStatLabel}>DODGE</Text>
-          </View>
-        )}
-
-        {/* Gold Value */}
-        <View style={styles.goldStat}>
-          <Text style={[styles.goldValue, { color: Colors.gold }]}>{item.price}</Text>
-          <Text style={styles.goldLabel}>GOLD</Text>
-        </View>
-      </View>
-
-      {/* Stat Bonuses Row (if any) */}
-      {Object.entries(item.statBonus || {}).some(([_, bonus]) => bonus > 0) && (
-        <View style={styles.bonusRow}>
-          <Text style={styles.bonusLabel}>Bonuses:</Text>
-          <View style={styles.bonusContainer}>
-            {Object.entries(item.statBonus).map(([stat, bonus]) => (
-              bonus > 0 && (
-                <Text key={stat} style={styles.bonusText}>
-                  +{bonus} {stat.charAt(0).toUpperCase() + stat.slice(1)}
+        {/* Secondary Stats Row */}
+        {(item.criticalChance || item.dodgeChance) && (
+          <View style={styles.secondaryStatsRow}>
+            {item.criticalChance && (
+              <View style={styles.secondaryStat}>
+                <Text style={styles.secondaryStatLabel}>Critical Chance</Text>
+                <Text style={[styles.secondaryStatValue, { color: Colors.criticalDamage }]}>
+                  {item.criticalChance}%
                 </Text>
-              )
-            ))}
+              </View>
+            )}
+
+            {item.dodgeChance && (
+              <View style={styles.secondaryStat}>
+                <Text style={styles.secondaryStatLabel}>Dodge Chance</Text>
+                <Text style={[styles.secondaryStatValue, { color: Colors.dodge }]}>
+                  {item.dodgeChance}%
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Stat Bonuses */}
+        {Object.entries(item.statBonus || {}).some(([_, bonus]) => bonus > 0) && (
+          <View style={styles.bonusSection}>
+            <Text style={styles.bonusSectionTitle}>Stat Bonuses</Text>
+            <View style={styles.bonusGrid}>
+              {Object.entries(item.statBonus).map(([stat, bonus]) => (
+                bonus > 0 && (
+                  <View key={stat} style={styles.bonusItem}>
+                    <Text style={styles.bonusValue}>+{bonus}</Text>
+                    <Text style={styles.bonusLabel}>
+                      {stat.charAt(0).toUpperCase() + stat.slice(1)}
+                    </Text>
+                  </View>
+                )
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* Footer Section */}
+      <View style={styles.footer}>
+        {/* Durability Bar */}
+        <View style={styles.durabilitySection}>
+          <View style={styles.durabilityHeader}>
+            <Text style={styles.durabilityLabel}>Durability</Text>
+            <Text style={styles.durabilityValue}>
+              {item.durability}/{item.maxDurability}
+            </Text>
+          </View>
+          <View style={styles.durabilityBar}>
+            <View
+              style={[
+                styles.durabilityFill,
+                {
+                  width: `${(item.durability / item.maxDurability) * 100}%`,
+                  backgroundColor: item.durability > item.maxDurability * 0.7 ? Colors.success :
+                    item.durability > item.maxDurability * 0.3 ? Colors.warning : Colors.error
+                }
+              ]}
+            />
           </View>
         </View>
-      )}
 
-      {/* Durability Bar */}
-      <View style={styles.durabilityRow}>
-        <View style={styles.durabilityBar}>
-          <View
-            style={[
-              styles.durabilityFill,
-              {
-                width: `${(item.durability / item.maxDurability) * 100}%`,
-                backgroundColor: item.durability > item.maxDurability * 0.5 ? Colors.success :
-                  item.durability > item.maxDurability * 0.25 ? Colors.warning : Colors.error
-              }
-            ]}
-          />
+        {/* Price */}
+        <View style={styles.priceSection}>
+          <Text style={styles.priceLabel}>Value</Text>
+          <View style={styles.priceContainer}>
+            <Text style={styles.priceValue}>{item.price.toLocaleString()}</Text>
+            <Text style={styles.goldIcon}>🪙</Text>
+          </View>
         </View>
-        <Text style={styles.durabilityText}>{item.durability}/{item.maxDurability}</Text>
       </View>
     </View>
   );
@@ -154,171 +192,235 @@ export const ItemStatsDisplay: React.FC<ItemStatsDisplayProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.surface,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 2,
-    padding: 10,
-    minWidth: 250,
+    overflow: 'hidden',
+    minWidth: 280,
+    maxWidth: 320,
   },
   compact: {
-    padding: 8,
-    minWidth: 200,
+    minWidth: 240,
+    maxWidth: 280,
   },
 
-  // Header Row
-  headerRow: {
+  // Header Section
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  nameSection: {
+  headerLeft: {
     flex: 1,
-    marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  itemIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  titleSection: {
+    flex: 1,
   },
   itemName: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    marginBottom: 2,
+  },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  itemLevel: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  separator: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginHorizontal: 6,
+  },
+  slotText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  rarityBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 8,
+  },
+  rarityText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: Colors.background,
+    letterSpacing: 0.5,
+  },
+
+  // Stats Grid
+  statsGrid: {
+    padding: 12,
+  },
+  primaryStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  primaryStat: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  primaryStatValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.2)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  itemLevel: {
+  primaryStatLabel: {
     fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: '600',
-    marginTop: 1,
-  },
-  badgeSection: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  rarityBadge: {
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  rarityText: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  slotBadge: {
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  slotText: {
-    fontSize: 9,
-    fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
   },
 
-  // Main Stats Row
-  mainStatsRow: {
+  secondaryStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  secondaryStat: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: Colors.surfaceElevated,
-    borderRadius: 6,
     padding: 8,
-    marginBottom: 6,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  mainStat: {
-    alignItems: 'center',
-    minWidth: 35,
-  },
-  mainStatValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0.5, height: 0.5 },
-    textShadowRadius: 1,
-  },
-  mainStatLabel: {
-    fontSize: 8,
-    color: Colors.textMuted,
-    fontWeight: '600',
-    marginTop: 1,
-  },
-  goldStat: {
-    alignItems: 'center',
-    marginLeft: 8,
-    paddingLeft: 8,
-    borderLeftWidth: 1,
-    borderLeftColor: Colors.border,
-  },
-  goldValue: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0.5, height: 0.5 },
-    textShadowRadius: 1,
-  },
-  goldLabel: {
-    fontSize: 8,
-    color: Colors.textMuted,
-    fontWeight: '600',
-    marginTop: 1,
-  },
-
-  // Bonus Row
-  bonusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  bonusLabel: {
-    fontSize: 10,
+  secondaryStatLabel: {
+    fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '600',
-    marginRight: 6,
   },
-  bonusContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-  },
-  bonusText: {
-    fontSize: 9,
-    color: Colors.success,
-    fontWeight: '600',
-    backgroundColor: Colors.surfaceElevated,
-    borderRadius: 3,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderWidth: 1,
-    borderColor: Colors.borderAccent,
+  secondaryStatValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 
-  // Durability Row
-  durabilityRow: {
+  // Bonus Section
+  bonusSection: {
+    marginBottom: 12,
+  },
+  bonusSectionTitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  bonusGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
   },
+  bonusItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ColorUtils.withOpacity(Colors.success, 0.1),
+    borderWidth: 1,
+    borderColor: ColorUtils.withOpacity(Colors.success, 0.3),
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  bonusValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: Colors.success,
+    marginRight: 4,
+  },
+  bonusLabel: {
+    fontSize: 11,
+    color: Colors.success,
+    fontWeight: '600',
+  },
+
+  // Footer Section
+  footer: {
+    backgroundColor: Colors.surfaceElevated,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    padding: 12,
+  },
+  durabilitySection: {
+    marginBottom: 10,
+  },
+  durabilityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  durabilityLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  durabilityValue: {
+    fontSize: 12,
+    color: Colors.text,
+    fontWeight: '600',
+  },
   durabilityBar: {
-    flex: 1,
-    height: 4,
+    height: 6,
     backgroundColor: Colors.background,
-    borderRadius: 2,
+    borderRadius: 3,
     borderWidth: 1,
     borderColor: Colors.border,
+    overflow: 'hidden',
   },
   durabilityFill: {
     height: '100%',
-    borderRadius: 1,
+    borderRadius: 2,
   },
-  durabilityText: {
-    fontSize: 9,
+
+  priceSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceLabel: {
+    fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '600',
-    minWidth: 35,
-    textAlign: 'right',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  priceValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.gold,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  goldIcon: {
+    fontSize: 14,
+    marginLeft: 4,
   },
 }); 
