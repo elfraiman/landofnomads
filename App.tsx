@@ -4,7 +4,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Alert } from 'rea
 import { GameProvider, useGame } from './src/context/GameContext';
 import CharacterCreationScreen from './src/screens/CharacterCreationScreen';
 import GameScreen from './src/screens/GameScreen';
-import { Colors, ColorUtils } from './src/utils/colors';
+import { Colors, ColorUtils, RPGTextStyles, DefaultTextStyle } from './src/utils/colors';
 
 type GameState = 'loading' | 'character-selection' | 'character-creation' | 'game';
 
@@ -149,13 +149,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   loadingText: {
-    fontSize: 24,
+    ...RPGTextStyles.h2,
     color: Colors.text,
     textAlign: 'center',
     marginTop: 100,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
   },
   header: {
     padding: 30,
@@ -170,20 +167,13 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   title: {
-    fontSize: 36,
-    fontWeight: 'bold',
+    ...RPGTextStyles.heroTitle,
     color: Colors.primary,
-    marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-    letterSpacing: 1,
   },
   subtitle: {
-    fontSize: 18,
+    ...RPGTextStyles.subtitle,
     color: Colors.textSecondary,
     fontStyle: 'italic',
-    letterSpacing: 0.5,
   },
   characterList: {
     flex: 1,
@@ -208,18 +198,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   characterName: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h2,
     color: Colors.text,
-    marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   characterClass: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.primary,
-    marginBottom: 8,
     fontWeight: '600',
   },
   characterStats: {
@@ -228,12 +212,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statText: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
   lastActive: {
-    fontSize: 11,
+    ...RPGTextStyles.caption,
     color: Colors.textMuted,
     fontStyle: 'italic',
   },
@@ -251,9 +235,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   deleteButtonText: {
-    fontSize: 20,
+    ...RPGTextStyles.button,
     color: Colors.text,
-    fontWeight: 'bold',
   },
   createNewButton: {
     backgroundColor: Colors.primary,
@@ -270,8 +253,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.accent,
   },
   createNewButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...RPGTextStyles.button,
     color: Colors.background,
     letterSpacing: 0.5,
   },

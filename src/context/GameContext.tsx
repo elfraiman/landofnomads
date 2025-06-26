@@ -36,6 +36,7 @@ interface GameContextType {
   addItemToInventory: (item: Item) => void;
   removeItemFromInventory: (itemId: string) => void;
   sellItem: (itemId: string) => void;
+  purchaseItem: (item: Item) => boolean;
 
   // Energy system
   regenerateEnergy: () => void;
@@ -443,16 +444,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         targetSlot = 'mainHand';
         currentEquipped = mainHand;
       }
+    } else if (item.type === 'shield') {
+      // Shields always go to off-hand
+      targetSlot = 'offHand';
+      currentEquipped = character.equipment.offHand;
     } else {
-      // For non-weapons, use direct mapping
-      const slotMap: Record<Exclude<ItemType, 'weapon'>, keyof Character['equipment']> = {
+      // For other item types, use direct mapping
+      const slotMap: Record<Exclude<ItemType, 'weapon' | 'shield'>, keyof Character['equipment']> = {
         armor: 'armor',
         helmet: 'helmet',
         boots: 'boots',
         accessory: 'accessory'
       };
 
-      targetSlot = slotMap[item.type as Exclude<ItemType, 'weapon'>];
+      targetSlot = slotMap[item.type as Exclude<ItemType, 'weapon' | 'shield'>];
       currentEquipped = character.equipment[targetSlot];
     }
 
@@ -615,6 +620,36 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Save the game after selling
     setTimeout(() => saveGame(), 100);
+  };
+
+  const purchaseItem = (item: Item): boolean => {
+    if (!gameState.currentCharacter) return false;
+
+    const character = gameState.currentCharacter;
+    
+    // Check if player has enough gold
+    if (character.gold < item.price) {
+      return false;
+    }
+
+    // Deduct gold and add item to inventory
+    const updatedCharacter = {
+      ...character,
+      gold: character.gold - item.price,
+      inventory: [...(character.inventory || []), item]
+    };
+
+    setGameState(prev => ({
+      ...prev,
+      currentCharacter: updatedCharacter,
+      characters: prev.characters.map(c =>
+        c.id === character.id ? updatedCharacter : c
+      )
+    }));
+
+    // Save the game after purchasing
+    setTimeout(() => saveGame(), 100);
+    return true;
   };
 
   const checkLevelUp = (): boolean => {
@@ -955,7 +990,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         totalRewards: { experience: 0, gold: 0, items: [] },
         combatLog: ['No character available'],
         timestamp: battleStartTime,
-        battleDuration: Date.now() - battleStartTime
+        battleDuration: Date.now() - battleStartTime,
+        weaponName: 'fists',
+        weaponRarity: 'common'
       };
     }
 
@@ -990,7 +1027,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         totalRewards: { experience: 0, gold: 0, items: [] },
         combatLog: ['Monster not found'],
         timestamp: battleStartTime,
-        battleDuration: Date.now() - battleStartTime
+        battleDuration: Date.now() - battleStartTime,
+        weaponName: 'fists',
+        weaponRarity: 'common'
       };
     }
 
@@ -1205,7 +1244,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         totalRewards: rewards,
         combatLog,
         timestamp: battleStartTime,
-        battleDuration: Date.now() - battleStartTime
+        battleDuration: Date.now() - battleStartTime,
+        weaponName: character.equipment.mainHand?.name || 'fists',
+        weaponRarity: character.equipment.mainHand?.rarity || 'common'
       };
     } catch (error) {
       console.error('Combat error:', error);
@@ -1220,7 +1261,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         totalRewards: { experience: 0, gold: 0, items: [] },
         combatLog: ['Combat error occurred'],
         timestamp: battleStartTime,
-        battleDuration: Date.now() - battleStartTime
+        battleDuration: Date.now() - battleStartTime,
+        weaponName: character.equipment.mainHand?.name || 'fists',
+        weaponRarity: character.equipment.mainHand?.rarity || 'common'
       };
     }
   };
@@ -1240,7 +1283,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         totalRewards: { experience: 0, gold: 0, items: [] },
         combatLog: ['No character or wilderness available'],
         timestamp: battleStartTime,
-        battleDuration: Date.now() - battleStartTime
+        battleDuration: Date.now() - battleStartTime,
+        weaponName: 'fists',
+        weaponRarity: 'common'
       };
     }
 
@@ -1271,7 +1316,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         totalRewards: { experience: 0, gold: 0, items: [] },
         combatLog: ['Tile not found'],
         timestamp: battleStartTime,
-        battleDuration: Date.now() - battleStartTime
+        battleDuration: Date.now() - battleStartTime,
+        weaponName: character.equipment.mainHand?.name || 'fists',
+        weaponRarity: character.equipment.mainHand?.rarity || 'common'
       };
     }
 
@@ -1288,7 +1335,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         totalRewards: { experience: 0, gold: 0, items: [] },
         combatLog: ['No monsters to fight'],
         timestamp: battleStartTime,
-        battleDuration: Date.now() - battleStartTime
+        battleDuration: Date.now() - battleStartTime,
+        weaponName: character.equipment.mainHand?.name || 'fists',
+        weaponRarity: character.equipment.mainHand?.rarity || 'common'
       };
     }
 
@@ -1401,7 +1450,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       totalRewards,
       combatLog,
       timestamp: battleStartTime,
-      battleDuration: Date.now() - battleStartTime
+      battleDuration: Date.now() - battleStartTime,
+      weaponName: character.equipment.mainHand?.name || 'fists',
+      weaponRarity: character.equipment.mainHand?.rarity || 'common'
     };
   };
 
@@ -1603,6 +1654,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     addItemToInventory,
     removeItemFromInventory,
     sellItem,
+    purchaseItem,
     regenerateEnergy,
     checkLevelUp,
     performLevelUp,

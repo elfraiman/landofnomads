@@ -4,7 +4,7 @@ import { Character, StatType } from '../../types';
 import { calculateCombatStats, spendStatPoint, calculateEquipmentBonuses } from '../../utils/combatEngine';
 import { useGame } from '../../context/GameContext';
 import { useCustomAlert } from '../ui/CustomAlert';
-import { Colors, ColorUtils } from '../../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
 import { StatusBar } from '../ui/StatusBar';
 
 interface CharacterStatsTabProps {
@@ -16,6 +16,7 @@ const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
   const { showAlert, AlertComponent } = useCustomAlert();
 
   const combatStats = calculateCombatStats(character);
+  const equipmentBreakdown = calculateEquipmentBonuses(character);
   const experienceForNextLevel = getExperienceForLevel(character.level + 1);
   const experienceProgress = getExperiencePercentage(character);
 
@@ -253,7 +254,6 @@ const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
           <View style={styles.combatStatsContainer}>
             <View style={styles.combatStatsGrid}>
               {(() => {
-                const equipmentBreakdown = calculateEquipmentBonuses(character);
                 return (
                   <>
                     <View style={styles.combatStatItem}>
@@ -302,6 +302,17 @@ const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
                       )}
                     </View>
                     <View style={styles.combatStatItem}>
+                      <Text style={styles.combatStatLabel}>Block</Text>
+                      <Text style={styles.combatStatValue}>{equipmentBreakdown.equipmentBonuses.blockChance}%</Text>
+                      {equipmentBreakdown.equipmentBonuses.blockChance > 0 ? (
+                        <Text style={styles.combatStatBonus}>
+                          +{equipmentBreakdown.equipmentBonuses.blockChance}% shield
+                        </Text>
+                      ) : (
+                        <Text style={styles.combatStatSource}>no shield</Text>
+                      )}
+                    </View>
+                    <View style={styles.combatStatItem}>
                       <Text style={styles.combatStatLabel}>Speed</Text>
                       <Text style={styles.combatStatValue}>{combatStats.speed}</Text>
                       <Text style={styles.combatStatSource}>from SPD + DEX</Text>
@@ -336,7 +347,6 @@ const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
           <Text style={styles.sectionSubtitle}>Base stats + Equipment bonuses = Total</Text>
           <View style={styles.statsGrid}>
             {(() => {
-              const equipmentBreakdown = calculateEquipmentBonuses(character);
               return Object.entries(equipmentBreakdown.baseStats).map(([statType, baseValue]) => {
                 const statColor = getStatColor(statType as StatType);
                 const equipmentBonus = equipmentBreakdown.equipmentStats[statType as keyof typeof equipmentBreakdown.equipmentStats];
@@ -431,6 +441,11 @@ const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
               label="Critical"
               value={`${combatStats.criticalChance}%`}
               description="Chance for double damage"
+            />
+            <StatItem
+              label="Block"
+              value={`${equipmentBreakdown.equipmentBonuses.blockChance}%`}
+              description="Chance to block attacks with shield"
             />
           </View>
         </View>
@@ -577,16 +592,19 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h2,
     color: Colors.primary,
     marginBottom: 15,
     borderBottomWidth: 2,
     borderBottomColor: Colors.primary,
     paddingBottom: 5,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+  },
+  sectionSubtitle: {
+    ...RPGTextStyles.bodySmall,
+    color: Colors.textSecondary,
+    marginBottom: 15,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   overviewContainer: {
     backgroundColor: Colors.surface,
@@ -613,15 +631,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderAccent,
   },
   overviewLabel: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     marginBottom: 2,
-    fontWeight: '600',
   },
   overviewValue: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.text,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   experienceContainer: {
     backgroundColor: Colors.surface,
@@ -642,14 +659,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   experienceText: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.text,
     fontWeight: '600',
   },
   experiencePercent: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.experience,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   experienceBar: {
     height: 10,
@@ -665,7 +682,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.experience,
   },
   experienceNext: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     textAlign: 'center',
     fontWeight: '500',
@@ -692,17 +709,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.text,
     fontWeight: '600',
   },
   statValue: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.primary,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   statDescription: {
-    fontSize: 11,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     fontStyle: 'italic',
   },
@@ -730,12 +747,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderAccent,
   },
   equipmentSlotName: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textSecondary,
     fontWeight: '600',
   },
   equipmentSlotItem: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.text,
     fontWeight: '500',
   },
@@ -763,15 +780,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderAccent,
   },
   recordLabel: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     marginBottom: 4,
     fontWeight: '600',
   },
   recordValue: {
-    fontSize: 18,
+    ...RPGTextStyles.h3,
     color: Colors.text,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   unspentContainer: {
     backgroundColor: ColorUtils.withOpacity(Colors.warning, 0.1),
@@ -787,16 +804,12 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   unspentTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h3,
     color: Colors.warning,
     marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   unspentSubtext: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.warning,
     fontWeight: '600',
   },
@@ -824,8 +837,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   statName: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.body,
+    fontWeight: '700',
     flex: 1,
   },
   addButton: {
@@ -844,8 +857,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   addButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h3,
     color: Colors.background,
   },
   combatStatsContainer: {
@@ -882,18 +894,18 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   combatStatLabel: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     marginBottom: 4,
     fontWeight: '600',
   },
   combatStatValue: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.primary,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   combatStatsNote: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 8,
@@ -915,16 +927,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   buildName: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    ...RPGTextStyles.bodySmall,
     color: Colors.primary,
     marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    fontWeight: '700',
   },
   buildDescription: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     lineHeight: 16,
   },
@@ -947,16 +956,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   healthLabel: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textSecondary,
     fontWeight: '600',
   },
   healthValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h3,
+    fontWeight: '700',
   },
   healthPercentage: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
@@ -988,7 +997,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   healthWarningText: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.error,
     textAlign: 'center',
     fontWeight: '600',
@@ -1017,9 +1026,9 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   healButtonText: {
+    ...RPGTextStyles.bodySmall,
     color: Colors.background,
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
     letterSpacing: 0.5,
   },
@@ -1039,17 +1048,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   fullHealthText: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.background,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  // NEW: Styles for enhanced stats breakdown
-  sectionSubtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 15,
-    fontStyle: 'italic',
+    fontWeight: '700',
     textAlign: 'center',
   },
   statBreakdown: {
@@ -1058,29 +1059,22 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   baseStatValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.body,
+    fontWeight: '700',
   },
   statOperator: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textSecondary,
     fontWeight: '600',
   },
   equipmentBonus: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.success,
-    fontWeight: 'bold',
-    backgroundColor: Colors.surfaceElevated,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.borderAccent,
+    fontWeight: '700',
   },
   totalStatValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 4,
+    ...RPGTextStyles.body,
+    fontWeight: '700',
   },
   equipmentNote: {
     fontSize: 10,
@@ -1090,18 +1084,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   combatStatBonus: {
-    fontSize: 10,
+    ...RPGTextStyles.caption,
     color: Colors.success,
     fontWeight: '600',
-    marginTop: 2,
   },
   combatStatSource: {
-    fontSize: 10,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
-    fontStyle: 'italic',
-    marginTop: 2,
+    fontWeight: '500',
   },
-  // Developer Tools Styles
   devSection: {
     marginTop: 16,
     padding: 16,

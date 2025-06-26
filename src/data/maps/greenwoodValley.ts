@@ -6,6 +6,23 @@ const findItemByName = (name: string) => {
   return baseItems.find(item => item.name === name);
 };
 
+// Balanced health calculation for enemies
+// Low tier (1-8): base 15 + (level × 3) with rarity modifiers
+const calculateEnemyHealth = (level: number, rarity: 'common' | 'uncommon' | 'rare' | 'elite') => {
+  const baseHealth = 15;
+  const levelMultiplier = 3; // Balanced multiplier
+  let rarityModifier = 1;
+  
+  switch (rarity) {
+    case 'common': rarityModifier = 1; break;
+    case 'uncommon': rarityModifier = 1.2; break;
+    case 'rare': rarityModifier = 1.5; break;
+    case 'elite': rarityModifier = 2; break;
+  }
+  
+  return Math.floor((baseHealth + (level * levelMultiplier)) * rarityModifier);
+};
+
 // Merchant inventory for Greenwood Valley
 export const greenwoodValleyMerchantInventory = [
   'Iron Sword',
@@ -28,7 +45,7 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 1,
     baseStats: {
-      health: 80,
+      health: calculateEnemyHealth(1, 'common'), // 12 HP
       damage: 4,
       armor: 1,
       speed: 8
@@ -46,7 +63,7 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 2,
     baseStats: {
-      health: 120,
+      health: calculateEnemyHealth(2, 'common'), // 14 HP
       damage: 7,
       armor: 2,
       speed: 6
@@ -65,7 +82,7 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 3,
     baseStats: {
-      health: 160,
+      health: calculateEnemyHealth(3, 'common'), // 16 HP
       damage: 10,
       armor: 3,
       speed: 12
@@ -84,7 +101,7 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 4,
     baseStats: {
-      health: 200,
+      health: calculateEnemyHealth(4, 'uncommon'), // 22 HP (18 * 1.2)
       damage: 12,
       armor: 4,
       speed: 10
@@ -103,7 +120,7 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 5,
     baseStats: {
-      health: 250,
+      health: calculateEnemyHealth(5, 'uncommon'), // 24 HP (20 * 1.2)
       damage: 15,
       armor: 6,
       speed: 8
@@ -122,7 +139,7 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 6,
     baseStats: {
-      health: 300,
+      health: calculateEnemyHealth(6, 'rare'), // 33 HP (22 * 1.5)
       damage: 18,
       armor: 4,
       speed: 15
@@ -141,7 +158,7 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 7,
     baseStats: {
-      health: 400,
+      health: calculateEnemyHealth(7, 'rare'), // 36 HP (24 * 1.5)
       damage: 22,
       armor: 8,
       speed: 10
@@ -160,7 +177,7 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
     emoji: '',
     level: 8,
     baseStats: {
-      health: 500,
+      health: calculateEnemyHealth(8, 'elite'), // 52 HP (26 * 2)
       damage: 25,
       armor: 10,
       speed: 12

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useGame } from '../context/GameContext';
-import { Colors, ColorUtils } from '../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles } from '../utils/colors';
 import CharacterStatsTab from '../components/character/CharacterStatsTab';
 import TrainingTab from '../components/character/TrainingTab';
 import CombatTab from '../components/combat/CombatTab';
@@ -22,18 +22,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<TabType>('stats');
   const [showLevelUpModal, setShowLevelUpModal] = useState(false);
   const { currentCharacter, checkLevelUp, performLevelUp, error, notifications, dismissNotification, saveGame, debugSaveData } = useGame();
-
-  const testStorage = async () => {
-    try {
-      console.log('=== STORAGE TEST ===');
-      await saveGame();
-      console.log('Save completed, now testing load...');
-      await debugSaveData();
-      console.log('=== TEST COMPLETE ===');
-    } catch (err) {
-      console.error('Storage test failed:', err);
-    }
-  };
 
   // Tab configuration for easy management
   const tabs = [
@@ -56,6 +44,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
     if (checkLevelUp()) {
       performLevelUp(); // This will give stat points
       setShowLevelUpModal(true);
+      saveGame();
     }
   }, [currentCharacter?.experience, checkLevelUp, performLevelUp]);
 
@@ -184,6 +173,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: Colors.border,
     padding: 20,
+    marginTop: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -195,25 +185,21 @@ const styles = StyleSheet.create({
   },
   characterInfo: {
     flex: 1,
+ 
   },
   characterName: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h2,
     color: Colors.text,
-    marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   characterClass: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.primary,
-    marginBottom: 12,
     fontWeight: '600',
   },
   resourcesContainer: {
     flexDirection: 'row',
-    gap: 20,
+    gap: 8,
+    marginTop: 8
   },
   resourceItem: {
     flexDirection: 'row',
@@ -226,15 +212,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   resourceLabel: {
+    ...RPGTextStyles.caption,
     fontSize: 12,
     color: Colors.textSecondary,
     marginRight: 4,
-    fontWeight: '500',
   },
   resourceValue: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.gold,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   unspentPointsBadge: {
     backgroundColor: Colors.warning,
@@ -250,9 +236,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   unspentPointsText: {
-    fontSize: 11,
+    ...RPGTextStyles.caption,
     color: Colors.background,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   headerButtons: {
     flexDirection: 'row',
@@ -267,9 +253,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderAccent,
   },
   testButtonText: {
+    ...RPGTextStyles.caption,
     color: Colors.background,
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   debugButton: {
     backgroundColor: Colors.info,
@@ -280,9 +266,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderAccent,
   },
   debugButtonText: {
+    ...RPGTextStyles.caption,
     color: Colors.background,
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   saveButton: {
     backgroundColor: Colors.success,
@@ -293,9 +279,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderAccent,
   },
   saveButtonText: {
+    ...RPGTextStyles.caption,
     color: Colors.background,
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   logoutButton: {
     backgroundColor: Colors.primary,
@@ -311,11 +297,12 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   logoutButtonText: {
+    ...RPGTextStyles.label,
     color: Colors.background,
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   tabContainer: {
+    paddingTop: 6,
     backgroundColor: Colors.surface,
     borderBottomWidth: 2,
     borderBottomColor: Colors.border,
@@ -356,26 +343,23 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   tabText: {
-    fontSize: 13,
-    fontWeight: '600',
+    ...RPGTextStyles.label,
     color: Colors.textSecondary,
     textAlign: 'center',
   },
   activeTabText: {
+    ...RPGTextStyles.label,
     color: Colors.primary,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   content: {
     flex: 1,
   },
   errorText: {
-    fontSize: 18,
+    ...RPGTextStyles.h3,
     color: Colors.error,
     textAlign: 'center',
     marginTop: 50,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
 });
 

@@ -100,26 +100,6 @@ export const characterClasses: CharacterClass[] = [
       speed: 1.2
     },
     primaryStat: 'strength'
-  },
-  {
-    id: 'archer',
-    name: 'Archer',
-    description: 'A ranged specialist with high accuracy and speed. Prefers to strike from distance.',
-    startingStats: {
-      strength: 8,
-      dexterity: 16,
-      constitution: 10,
-      intelligence: 9,
-      speed: 14
-    },
-    statGrowth: {
-      strength: 0.9,
-      dexterity: 1.3,
-      constitution: 1.0,
-      intelligence: 1.0,
-      speed: 1.2
-    },
-    primaryStat: 'dexterity'
   }
 ];
 

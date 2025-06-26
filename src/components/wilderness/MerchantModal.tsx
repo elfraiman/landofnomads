@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Character, Item } from '../../types';
-import { Colors, ColorUtils } from '../../utils/colors';
 import { useGame } from '../../context/GameContext';
+import { getMerchantInventory } from '../../data/wilderness';
+import { Item } from '../../types';
+import { Colors, RPGTextStyles } from '../../utils/colors';
 import { useCustomAlert } from '../ui/CustomAlert';
 import { ItemStatsDisplay } from '../ui/ItemStatsDisplay';
-import { getMerchantInventory } from '../../data/wilderness';
 
 interface MerchantModalProps {
   visible: boolean;
@@ -31,7 +31,7 @@ export const MerchantModal: React.FC<MerchantModalProps> = ({
   mapId,
   playerLevel
 }) => {
-  const { currentCharacter, addItemToInventory, updateCharacter, saveGame } = useGame();
+  const { currentCharacter, purchaseItem, saveGame } = useGame();
   const { showAlert, AlertComponent } = useCustomAlert();
   const [merchantState, setMerchantState] = useState<MerchantState>({
     inventory: [],
@@ -41,40 +41,78 @@ export const MerchantModal: React.FC<MerchantModalProps> = ({
   // Initialize merchant inventory when modal opens
   useEffect(() => {
     if (visible) {
+      console.log('Modal opened, refreshing inventory...');
       refreshMerchantInventory();
     }
   }, [visible, mapId, playerLevel]);
 
-  const refreshMerchantInventory = () => {
+  // Debug: Log merchant state changes
+  useEffect(() => {
+    console.log('Merchant state updated:', {
+      inventoryCount: merchantState.inventory.length,
+      lastRefresh: merchantState.lastRefresh,
+      firstItem: merchantState.inventory[0]?.name || 'None'
+    });
+  }, [merchantState]);
+
+    const refreshMerchantInventory = () => {
     const now = Date.now();
 
     // Check if we need to refresh (first time or 20 minutes passed)
     if (merchantState.lastRefresh === 0 || (now - merchantState.lastRefresh) >= REFRESH_INTERVAL) {
-      // Get map-specific inventory
-      const newInventory = getMerchantInventory(mapId, playerLevel);
+      try {
+        // Get map-specific inventory
+        const newInventory = getMerchantInventory(mapId, playerLevel);
 
-      setMerchantState({
-        inventory: newInventory,
-        lastRefresh: now
-      });
+        console.log('Merchant Debug:', {
+          mapId,
+          playerLevel,
+          inventoryLength: newInventory.length,
+          firstItem: newInventory.length > 0 ? { name: newInventory[0].name, price: newInventory[0].price } : 'None'
+        });
+
+        // Always create fallback inventory for testing
+        const { generateItem, baseItems } = require('../../data/items');
+        const testItems = ['Iron Sword', 'Steel Blade', 'Padded Undershirt', 'Leather Boots'];
+        
+        const fallbackInventory = testItems.map((itemName, index) => {
+          const baseItem = baseItems.find((item: any) => item.name === itemName);
+          if (baseItem) {
+            return generateItem(baseItem, Math.max(1, playerLevel + index));
+          }
+          return null;
+        }).filter((item): item is Item => item !== null);
+
+        // Use original inventory if available, otherwise use fallback
+        const finalInventory = newInventory.length > 0 ? newInventory : fallbackInventory;
+
+        console.log('Final inventory:', finalInventory.length, 'items');
+
+        setMerchantState({
+          inventory: finalInventory,
+          lastRefresh: now
+        });
+      } catch (error) {
+        console.error('Error refreshing merchant inventory:', error);
+        // Create minimal fallback on error
+        setMerchantState({
+          inventory: [],
+          lastRefresh: now
+        });
+      }
     }
   };
 
-  const purchaseItem = (item: Item) => {
+  const handlePurchase = (item: Item) => {
     if (!currentCharacter) return;
 
-    if (currentCharacter.gold < item.price) {
+    // Use the global purchaseItem function from context
+    const success = purchaseItem(item);
+    
+    if (!success) {
       showAlert('Insufficient Gold', `You need ${item.price} gold to purchase this item.`);
       return;
     }
-
-    // Deduct gold and add to inventory
-    const updatedCharacter = {
-      ...currentCharacter,
-      gold: currentCharacter.gold - item.price
-    };
-    updateCharacter(updatedCharacter);
-    addItemToInventory(item);
 
     // Remove item from merchant inventory
     setMerchantState(prev => ({
@@ -83,7 +121,6 @@ export const MerchantModal: React.FC<MerchantModalProps> = ({
     }));
 
     showAlert('Purchase Successful!', `${item.name} added to your inventory!`);
-    saveGame();
   };
 
   const getMerchantGreeting = () => {
@@ -147,39 +184,47 @@ export const MerchantModal: React.FC<MerchantModalProps> = ({
             </Text>
           </View>
 
-          {/* Inventory */}
-          <ScrollView style={styles.inventoryScroll} showsVerticalScrollIndicator={false}>
+          {/* Debug Info */}
+          {__DEV__ && (
+            <View style={{ padding: 16, backgroundColor: Colors.surface, margin: 16, borderRadius: 8 }}>
+              <Text style={{ color: Colors.warning, fontSize: 12 }}>
+                Debug: MapID={mapId}, PlayerLevel={playerLevel}, InventoryLength={merchantState.inventory.length}
+              </Text>
+              <Text>Test</Text>
+              {merchantState.inventory.length > 0 && (
+                <Text style={{ color: Colors.info, fontSize: 10 }}>
+                  First item: {merchantState.inventory[0]?.name || 'undefined'}
+                </Text>
+              )}
+            </View>
+          )}
+
+          <ScrollView style={styles.inventoryScroll}>
             {merchantState.inventory.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>The merchant is out of stock!</Text>
                 <Text style={styles.emptySubtext}>Come back later when they restock.</Text>
               </View>
             ) : (
-              <View style={styles.itemGrid}>
-                {merchantState.inventory.map((item) => (
-                  <View key={item.id} style={styles.itemCard}>
+              <View style={styles.itemList}>
+                {merchantState.inventory.map((item, index) => (
+                  <View key={`merchant-item-${index}-${item.id}`} >
                     <ItemStatsDisplay item={item} showSlotInfo={true} />
-
-                    <Text style={styles.itemDescription}>{item.description}</Text>
-
-                    <View style={styles.itemFooter}>
-                      <Text style={styles.itemPrice}>{item.price} Gold</Text>
-                      <TouchableOpacity
-                        style={[
-                          styles.purchaseButton,
-                          currentCharacter.gold < item.price && styles.disabledPurchaseButton
-                        ]}
-                        onPress={() => purchaseItem(item)}
-                        disabled={currentCharacter.gold < item.price}
-                      >
-                        <Text style={[
-                          styles.purchaseButtonText,
-                          currentCharacter.gold < item.price && styles.disabledPurchaseText
-                        ]}>
-                          {currentCharacter.gold >= item.price ? 'Buy' : 'Too Expensive'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.buyButton,
+                        currentCharacter.gold < item.price && styles.disabledBuyButton
+                      ]}
+                      onPress={() => handlePurchase(item)}
+                      disabled={currentCharacter.gold < item.price}
+                    >
+                      <Text style={[
+                        styles.buyButtonText,
+                        currentCharacter.gold < item.price && styles.disabledBuyText
+                      ]}>
+                        {currentCharacter.gold >= item.price ? 'Buy' : 'Too Expensive'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 ))}
               </View>
@@ -232,18 +277,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   merchantName: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h2,
     color: Colors.primary,
     marginBottom: 4,
   },
   merchantDescription: {
-    fontSize: 14,
+    ...RPGTextStyles.body,
     color: Colors.textSecondary,
     marginBottom: 8,
   },
   merchantGreeting: {
-    fontSize: 13,
+    ...RPGTextStyles.bodySmall,
     color: Colors.text,
     fontStyle: 'italic',
   },
@@ -258,9 +302,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   closeButtonText: {
-    fontSize: 18,
+    ...RPGTextStyles.body,
     color: Colors.text,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   goldContainer: {
     backgroundColor: Colors.surface,
@@ -272,8 +316,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   goldText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.body,
+    fontWeight: '700',
     color: Colors.gold,
   },
   refreshContainer: {
@@ -284,17 +328,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   refreshText: {
+    ...RPGTextStyles.label,
     color: Colors.info,
-    fontSize: 14,
-    fontWeight: '600',
   },
   itemCount: {
+    ...RPGTextStyles.label,
     color: Colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '600',
   },
   inventoryScroll: {
-    flex: 1,
     paddingHorizontal: 16,
   },
   emptyContainer: {
@@ -308,62 +349,68 @@ const styles = StyleSheet.create({
     margin: 16,
   },
   emptyText: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.textSecondary,
     marginBottom: 8,
     fontWeight: '600',
   },
   emptySubtext: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textMuted,
     textAlign: 'center',
   },
-  itemGrid: {
-    gap: 12,
-    paddingBottom: 16,
+  itemList: {
+    paddingVertical: 8,
   },
-  itemCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  itemDescription: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 16,
-    marginVertical: 8,
-  },
-  itemFooter: {
+  itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    backgroundColor: Colors.surface,
+    padding: 12,
+    marginHorizontal: 16,
+    marginVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  itemInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  itemName: {
+    ...RPGTextStyles.body,
+    color: Colors.text,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   itemPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.caption,
     color: Colors.gold,
   },
-  purchaseButton: {
-    backgroundColor: Colors.accent,
+  buyButton: {
+    backgroundColor: Colors.gold,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    marginBottom: 8,
+    marginTop: 8,
     borderRadius: 6,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderColor: Colors.primary,
   },
-  disabledPurchaseButton: {
+  disabledBuyButton: {
     backgroundColor: Colors.disabled,
     borderColor: Colors.border,
   },
-  purchaseButtonText: {
+  buyButtonText: {
+    ...RPGTextStyles.button,
     color: Colors.background,
-    fontWeight: 'bold',
-    fontSize: 14,
+
   },
-  disabledPurchaseText: {
+  disabledBuyText: {
+    ...RPGTextStyles.button,
     color: Colors.textMuted,
   },
   footer: {
@@ -380,8 +427,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.accent,
   },
   leaveButtonText: {
+    ...RPGTextStyles.button,
     color: Colors.background,
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 }); 

@@ -619,6 +619,5 @@ export const getMerchantInventory = (mapId: string, playerLevel: number): Item[]
       inventory.push(generatedItem);
     }
   }
-
   return inventory;
 }; 

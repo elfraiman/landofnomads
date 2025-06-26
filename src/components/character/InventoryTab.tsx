@@ -4,7 +4,7 @@ import { Character, Item, ItemType, ItemRarity } from '../../types';
 import { useGame } from '../../context/GameContext';
 import { useCustomAlert } from '../ui/CustomAlert';
 import { ItemStatsDisplay } from '../ui/ItemStatsDisplay';
-import { Colors } from '../../utils/colors';
+import { Colors, RPGTextStyles } from '../../utils/colors';
 
 interface InventoryTabProps {
   character: Character;
@@ -88,6 +88,7 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
       // For non-weapons, use the existing logic
       const slotMap: Record<ItemType, keyof Character['equipment']> = {
         weapon: 'mainHand', // This won't be used due to above check
+        shield: 'offHand',  // Shields go to off-hand
         armor: 'armor',
         helmet: 'helmet',
         boots: 'boots',
@@ -165,8 +166,6 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
     );
   };
 
-
-
   const getFilteredInventory = () => {
     const inventory = activeCharacter.inventory || [];
     if (selectedFilter === 'all') {
@@ -190,6 +189,7 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
   const filterOptions = [
     { key: 'all', name: 'All Items' },
     { key: 'weapon', name: 'Weapons' },
+    { key: 'shield', name: 'Shields' },
     { key: 'armor', name: 'Armor' },
     { key: 'helmet', name: 'Helmets' },
     { key: 'boots', name: 'Boots' },
@@ -199,13 +199,7 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Inventory & Equipment</Text>
-          <View style={styles.goldContainer}>
-            <Text style={styles.goldText}>Gold: {activeCharacter.gold}</Text>
-          </View>
-        </View>
+ 
 
         <Text style={styles.subtitle}>
           Manage your equipment and inventory items
@@ -215,7 +209,7 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Currently Equipped</Text>
 
-          <View style={styles.equipmentGrid}>
+          <View style={styles.equipmentList}>
             {getEquipmentSlots().map(slot => {
               const item = activeCharacter.equipment[slot.key];
 
@@ -258,18 +252,18 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Inventory ({(activeCharacter.inventory || []).length} items)</Text>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
             {filterOptions.map(filter => (
               <TouchableOpacity
                 key={filter.key}
                 style={[
                   styles.filterButton,
-                  selectedFilter === filter.key && styles.activeFilterButton
+                  selectedFilter === filter.key && styles.activeFilter
                 ]}
                 onPress={() => setSelectedFilter(filter.key as any)}
               >
                 <Text style={[
-                  styles.filterText,
+                  styles.filterButtonText,
                   selectedFilter === filter.key && styles.activeFilterText
                 ]}>
                   {filter.name}
@@ -292,18 +286,14 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
               </Text>
             </View>
           ) : (
-            <View style={styles.inventoryGrid}>
+            <View style={styles.inventoryList}>
               {getFilteredInventory().map(item => (
                 <View key={item.id} style={styles.inventoryItem}>
                   <ItemStatsDisplay
                     item={item}
                     showSlotInfo={true}
+                    compact={true}
                   />
-
-                  {/* Item Description */}
-                  <Text style={styles.itemDescription}>
-                    {item.description}
-                  </Text>
 
                   {/* Item Actions */}
                   <View style={styles.itemActions}>
@@ -319,7 +309,7 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
                       onPress={() => handleSellItem(item)}
                     >
                       <Text style={styles.sellButtonText}>
-                        Sell ({Math.floor(item.price * 0.5)})
+                        Sell ({Math.floor(item.price * 0.5)}g)
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -354,23 +344,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   content: {
-    padding: 20,
+    padding: 16,
   },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h2,
     color: Colors.primary,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   goldContainer: {
     backgroundColor: Colors.surface,
@@ -394,26 +375,30 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   subtitle: {
-    fontSize: 14,
+    ...RPGTextStyles.body,
     color: Colors.textSecondary,
-    marginBottom: 24,
+    marginBottom: 20,
+    lineHeight: 20,
     textAlign: 'center',
   },
 
   // Sections
   section: {
-    marginBottom: 24,
+    marginBottom: 25,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 12,
+    ...RPGTextStyles.h2,
+    color: Colors.primary,
+    marginBottom: 15,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.primary,
+    paddingBottom: 5,
   },
 
   // Equipment Slots
-  equipmentGrid: {
-    gap: 12,
+  equipmentList: {
+    gap: 15,
+    marginBottom: 25,
   },
   equipmentSlot: {
     backgroundColor: Colors.surface,
@@ -425,232 +410,161 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 4,
   },
   slotHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  slotEmoji: {
-    fontSize: 18,
-    marginRight: 8,
+    marginBottom: 12,
   },
   slotName: {
+    ...RPGTextStyles.body,
+    color: Colors.primary,
+    fontWeight: '700',
+    marginBottom: 8,
     fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.text,
   },
   equippedItem: {
-    gap: 8,
-  },
-  equippedItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  equippedItemName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  equippedItemRarity: {
-    fontSize: 16,
-  },
-  equippedItemStats: {
-    fontSize: 12,
-    color: '#2ea043',
-    fontWeight: '500',
+    gap: 12,
   },
   unequipButton: {
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-    minHeight: 32,
-    minWidth: 80,
-    justifyContent: 'center',
+    backgroundColor: Colors.error,
+    borderRadius: 8,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderAccent,
+    shadowColor: Colors.error,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
   unequipButtonText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: 'bold',
+    ...RPGTextStyles.bodySmall,
+    color: Colors.background,
+    fontWeight: '700',
   },
   emptySlot: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    backgroundColor: Colors.overlay,
+    backgroundColor: Colors.surfaceElevated,
     borderRadius: 8,
-    borderWidth: 1,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
     borderColor: Colors.border,
     borderStyle: 'dashed',
   },
   emptySlotText: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textMuted,
     fontStyle: 'italic',
+    textAlign: 'center',
   },
 
   // Filter
-  filterScroll: {
-    marginBottom: 16,
+  filterContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
   },
   filterButton: {
-    backgroundColor: Colors.surface,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 8,
-    alignItems: 'center',
-    borderWidth: 2,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
     borderColor: Colors.border,
-    minWidth: 80,
+  },
+  activeFilter: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.accent,
+  },
+  filterButtonText: {
+    ...RPGTextStyles.bodySmall,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  activeFilterText: {
+    ...RPGTextStyles.bodySmall,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+
+  // Inventory
+  inventoryList: {
+    gap: 8,
+  },
+  inventoryItem: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
     shadowColor: Colors.background,
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 2,
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
   },
-  activeFilterButton: {
-    backgroundColor: Colors.primary,
+  itemDetails: {
+    flex: 1,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 8,
+  },
+  equipButton: {
+    backgroundColor: Colors.success,
     borderColor: Colors.accent,
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  filterEmoji: {
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  filterText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: 'bold',
-  },
-  activeFilterText: {
-    color: Colors.background,
-  },
-
-  // Inventory
-  emptyInventory: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
     alignItems: 'center',
-    paddingVertical: 40,
+    flex: 1,
+  },
+  sellButton: {
+    backgroundColor: Colors.warning,
+    borderColor: Colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignItems: 'center',
+    flex: 1,
+  },
+  equipButtonText: {
+    ...RPGTextStyles.bodySmall,
+    color: Colors.background,
+    fontWeight: '700',
+  },
+  sellButtonText: {
+    ...RPGTextStyles.bodySmall,
+    color: Colors.background,
+    fontWeight: '700',
+  },
+  emptyInventory: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    padding: 30,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   emptyInventoryIcon: {
     fontSize: 48,
     marginBottom: 12,
   },
   emptyInventoryText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginBottom: 4,
+    ...RPGTextStyles.body,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    padding: 30,
   },
   emptyInventorySubtext: {
     fontSize: 14,
     color: Colors.textMuted,
-  },
-  inventoryGrid: {
-    gap: 12,
-  },
-  inventoryItem: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  itemTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  itemEmoji: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  rarityBadge: {
-    alignItems: 'center',
-  },
-  rarityEmoji: {
-    fontSize: 16,
-  },
-  itemLevel: {
-    fontSize: 12,
-    color: '#79c0ff',
-    marginBottom: 6,
-  },
-  itemStats: {
-    fontSize: 13,
-    color: '#2ea043',
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  itemDescription: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 16,
-    marginBottom: 12,
-  },
-  itemActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  equipButton: {
-    backgroundColor: Colors.success,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    flex: 1,
-    shadowColor: Colors.success,
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  equipButtonText: {
-    color: Colors.background,
-    fontWeight: 'bold',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  sellButton: {
-    backgroundColor: Colors.error,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    flex: 1,
-    shadowColor: Colors.error,
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  sellButtonText: {
-    color: Colors.background,
-    fontWeight: 'bold',
-    fontSize: 13,
-    textAlign: 'center',
   },
 
   // Info Box
@@ -659,25 +573,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,
-    borderLeftColor: Colors.info,
+    borderLeftColor: Colors.primary,
     borderWidth: 2,
     borderColor: Colors.border,
-    shadowColor: Colors.info,
-    shadowOpacity: 0.2,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 4,
   },
   infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: Colors.text,
+    ...RPGTextStyles.body,
+    color: Colors.primary,
     marginBottom: 8,
+    fontWeight: '700',
   },
   infoText: {
-    fontSize: 13,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });
 

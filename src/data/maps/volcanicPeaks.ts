@@ -6,56 +6,74 @@ const findItemByName = (name: string) => {
   return baseItems.find(item => item.name === name);
 };
 
+// Balanced health calculation for enemies
+// High tier (26-40): base 15 + (level × 3) with rarity modifiers
+const calculateEnemyHealth = (level: number, rarity: 'common' | 'uncommon' | 'rare' | 'elite') => {
+  const baseHealth = 15;
+  const levelMultiplier = 3; // Balanced multiplier
+  let rarityModifier = 1;
+  
+  switch (rarity) {
+    case 'common': rarityModifier = 1; break;
+    case 'uncommon': rarityModifier = 1.2; break;
+    case 'rare': rarityModifier = 1.5; break;
+    case 'elite': rarityModifier = 2; break;
+  }
+  
+  return Math.floor((baseHealth + (level * levelMultiplier)) * rarityModifier);
+};
+
 // Merchant inventory for Volcanic Peaks
 export const volcanicPeaksMerchantInventory = [
-  'Staff of Eternal Fire',
-  'Dragonbone Sword',
-  'Berserker Axe',
-  'Red Dragon Mail',
-  'Demonic Plate Armor',
-  'Dragon Heart Pendant',
-  'Dragonslayer Crossbow',
-  'Chaos Blade',
-  'Fortress Hammer',
-  'Aegis Blade'
+  'Dwarven Axe',
+  'Flame Sword',
+  'Dragon Slayer',
+  'Dragon Scale Armor',
+  'Phoenix Mail',
+  'Dragon Scale Shield',
+  'Winged Boots',
+  'Crossbow',
+  'Sapphire Ring',
+  'Ruby Ring'
 ];
 
-// ===== VOLCANIC PEAKS (Levels 25-35) =====
+// ===== VOLCANIC PEAKS (Levels 26-40) =====
 export const volcanicPeaksMonsters: WildernessMonster[] = [
   {
-    id: 'lava_salamander',
-    name: 'Lava Salamander',
+    id: 'lava_lizard',
+    name: 'Lava Lizard',
     emoji: '',
-    level: 25,
+    level: 26,
     baseStats: {
-      health: 1500,
-      damage: 75,
-      armor: 20,
-      speed: 18
+      health: calculateEnemyHealth(26, 'common'), // 114 HP
+      damage: 78,
+      armor: 18,
+      speed: 20
     },
     biomes: ['volcanic'],
     rarity: 'common',
     lootTable: [
-      { itemId: 'salamander_scale', chance: 0.4 },
-      { itemId: 'fire_essence', chance: 0.3 }
+      { itemId: 'lizard_scale', chance: 0.4 },
+      { itemId: 'fire_crystal', chance: 0.3 },
+      { itemId: 'health_potion', chance: 0.2 }
     ]
   },
   {
     id: 'fire_imp',
     name: 'Fire Imp',
     emoji: '',
-    level: 26,
+    level: 27,
     baseStats: {
-      health: 1430,
-      damage: 85,
+      health: calculateEnemyHealth(27, 'common'), // 118 HP
+      damage: 82,
       armor: 15,
       speed: 25
     },
     biomes: ['volcanic'],
     rarity: 'common',
     lootTable: [
-      { itemId: 'imp_horn', chance: 0.35 },
-      { itemId: 'flame_crystal', chance: 0.25 },
+      { itemId: 'imp_horn', chance: 0.5 },
+      { itemId: 'sulfur', chance: 0.3 },
       { itemId: 'mana_potion', chance: 0.2 }
     ]
   },
@@ -63,115 +81,115 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
     id: 'magma_golem',
     name: 'Magma Golem',
     emoji: '',
-    level: 27,
+    level: 28,
     baseStats: {
-      health: 1620,
-      damage: 75,
-      armor: 30,
-      speed: 10
+      health: calculateEnemyHealth(28, 'uncommon'), // 146 HP (122 * 1.2)
+      damage: 85,
+      armor: 25,
+      speed: 8
     },
     biomes: ['volcanic'],
     rarity: 'uncommon',
     lootTable: [
-      { itemId: 'magma_core', chance: 0.5 },
-      { itemId: 'obsidian_shard', chance: 0.3 },
-      { itemId: 'defense_potion', chance: 0.25 }
+      { itemId: 'magma_core', chance: 0.6 },
+      { itemId: 'obsidian_shard', chance: 0.4 },
+      { itemId: 'fire_resistance_potion', chance: 0.3 }
     ]
   },
   {
     id: 'flame_wraith',
     name: 'Flame Wraith',
     emoji: '',
-    level: 28,
+    level: 29,
     baseStats: {
-      health: 1540,
-      damage: 95,
+      health: calculateEnemyHealth(29, 'uncommon'), // 150 HP (126 * 1.2)
+      damage: 88,
       armor: 12,
-      speed: 22
+      speed: 30
     },
     biomes: ['volcanic'],
     rarity: 'uncommon',
     lootTable: [
-      { itemId: 'wraith_flame', chance: 0.4 },
-      { itemId: 'spirit_ash', chance: 0.35 },
-      { itemId: 'fire_resistance_potion', chance: 0.2 }
+      { itemId: 'flame_essence', chance: 0.5 },
+      { itemId: 'burning_soul', chance: 0.4 },
+      { itemId: 'spirit_potion', chance: 0.3 }
     ]
   },
   {
     id: 'volcanic_drake',
     name: 'Volcanic Drake',
     emoji: '',
-    level: 29,
+    level: 30,
     baseStats: {
-      health: 1740,
-      damage: 90,
-      armor: 25,
-      speed: 16
+      health: calculateEnemyHealth(30, 'rare'), // 195 HP (130 * 1.5)
+      damage: 92,
+      armor: 22,
+      speed: 22
     },
     biomes: ['volcanic'],
     rarity: 'rare',
     lootTable: [
-      { itemId: 'drake_wing', chance: 0.4 },
-      { itemId: 'volcanic_gem', chance: 0.3 },
-      { itemId: 'rare_ore', chance: 0.2 }
+      { itemId: 'drake_wing', chance: 0.6 },
+      { itemId: 'volcanic_gem', chance: 0.4 },
+      { itemId: 'rare_potion', chance: 0.3 }
     ]
   },
   {
     id: 'phoenix',
     name: 'Phoenix',
     emoji: '',
-    level: 30,
+    level: 32,
     baseStats: {
-      health: 1650,
-      damage: 105,
-      armor: 18,
-      speed: 28
+      health: calculateEnemyHealth(32, 'rare'), // 207 HP (138 * 1.5)
+      damage: 96,
+      armor: 20,
+      speed: 35
     },
     biomes: ['volcanic'],
     rarity: 'rare',
     lootTable: [
-      { itemId: 'phoenix_feather', chance: 0.6 },
-      { itemId: 'rebirth_essence', chance: 0.4 },
-      { itemId: 'legendary_potion', chance: 0.25 }
+      { itemId: 'phoenix_feather', chance: 0.7 },
+      { itemId: 'phoenix_ash', chance: 0.5 },
+      { itemId: 'resurrection_potion', chance: 0.4 }
     ]
   },
   {
     id: 'lava_titan',
     name: 'Lava Titan',
     emoji: '',
-    level: 31,
+    level: 35,
     baseStats: {
-      health: 1860,
-      damage: 100,
-      armor: 35,
+      health: calculateEnemyHealth(35, 'rare'), // 225 HP (150 * 1.5)
+      damage: 105,
+      armor: 30,
       speed: 12
     },
     biomes: ['volcanic'],
     rarity: 'rare',
     lootTable: [
-      { itemId: 'titan_heart', chance: 0.5 },
-      { itemId: 'molten_steel', chance: 0.35 },
-      { itemId: 'strength_potion', chance: 0.3 }
+      { itemId: 'titan_heart', chance: 0.6 },
+      { itemId: 'molten_steel', chance: 0.5 },
+      { itemId: 'strength_potion', chance: 0.4 }
     ]
   },
   {
     id: 'inferno_dragon',
     name: 'Inferno Dragon',
     emoji: '',
-    level: 32,
+    level: 40,
     baseStats: {
-      health: 1920,
-      damage: 110,
-      armor: 32,
-      speed: 18
+      health: calculateEnemyHealth(40, 'elite'), // 340 HP (170 * 2)
+      damage: 120,
+      armor: 35,
+      speed: 25
     },
     biomes: ['volcanic'],
     rarity: 'elite',
     lootTable: [
       { itemId: 'dragon_heart', chance: 0.8 },
       { itemId: 'inferno_scale', chance: 0.6 },
-      { itemId: 'legendary_gem', chance: 0.4 },
-      { itemId: 'full_heal_potion', chance: 0.5 }
+      { itemId: 'legendary_gem', chance: 0.5 },
+      { itemId: 'full_heal_potion', chance: 0.4 }
     ]
   }
 ];
@@ -179,8 +197,8 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
 export const volcanicPeaksConfig = {
   id: 'volcanic_peaks',
   name: 'Volcanic Peaks',
-  description: 'Scorching volcanic mountains where fire elementals and dragons make their home.',
-  requiredLevel: 25,
+  description: 'Treacherous volcanic mountains where fire elementals and ancient dragons dwell.',
+  requiredLevel: 26,
   bossDefeated: false,
   monsters: volcanicPeaksMonsters
 }; 

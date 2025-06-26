@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions, Modal } from 'react-native';
-import { Colors } from '../../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -268,13 +268,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.body,
     color: Colors.text,
     marginBottom: 4,
+    fontWeight: '700',
   },
   message: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textSecondary,
     lineHeight: 18,
   },
@@ -284,12 +284,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   itemName: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    ...RPGTextStyles.bodySmall,
     marginRight: 8,
+    fontWeight: '700',
   },
   itemLevel: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
   },
   dismissButton: {
@@ -302,8 +302,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   dismissText: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.textSecondary,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 }); 

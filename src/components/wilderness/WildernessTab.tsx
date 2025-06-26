@@ -4,7 +4,7 @@ import { useGame } from '../../context/GameContext';
 import { DetailedBattleResult } from '../../types';
 import { BattleResultsModal } from '../combat/BattleResultsModal';
 import { useCustomAlert } from '../ui/CustomAlert';
-import { Colors, ColorUtils } from '../../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
 import { PortalModal } from './PortalModal';
 import { MerchantModal } from './MerchantModal';
 import { getTileEmoji } from '../../data/wilderness';
@@ -249,8 +249,8 @@ export const WildernessTab: React.FC = () => {
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {/* Map Header */}
       <View style={styles.header}>
-        <Text style={styles.mapTitle}>{currentMap.name}</Text>
-        <Text style={styles.mapDescription}>{currentMap.description}</Text>
+        <Text style={styles.title}>{currentMap.name}</Text>
+        <Text style={styles.subtitle}>{currentMap.description}</Text>
         <View style={styles.positionInfo}>
           <Text style={styles.positionText}>
             Position: ({playerPosition.x}, {playerPosition.y})
@@ -362,7 +362,7 @@ export const WildernessTab: React.FC = () => {
       {/* Portal Section - Show when on a portal tile */}
       {currentTile.features?.some(f => f.type === 'portal' && f.isActive) && (
         <View style={styles.portalSection}>
-          <Text style={styles.portalSectionTitle}>🌀 Portal Hub</Text>
+          <Text style={styles.sectionTitle}>🌀 Portal Hub</Text>
           <Text style={styles.portalDescription}>
             A mystical portal that can transport you to other realms. Each realm offers unique challenges and rewards!
           </Text>
@@ -608,21 +608,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  mapTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  title: {
+    ...RPGTextStyles.h1,
     color: Colors.primary,
-    textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  mapDescription: {
-    fontSize: 16,
-    color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 12
+  },
+  subtitle: {
+    ...RPGTextStyles.body,
+    color: Colors.textSecondary,
+    marginBottom: 20,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   positionInfo: {
     alignItems: 'center'
@@ -660,12 +657,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  portalSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.info,
-    marginBottom: 8,
-    textAlign: 'center'
+  sectionTitle: {
+    ...RPGTextStyles.h2,
+    color: Colors.primary,
+    marginBottom: 15,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.primary,
+    paddingBottom: 5,
   },
   portalDescription: {
     fontSize: 14,
@@ -779,12 +777,12 @@ const styles = StyleSheet.create({
     flex: 1
   },
   monsterName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: Colors.text
+    ...RPGTextStyles.bodySmall,
+    color: Colors.text,
+    fontWeight: '700',
   },
   monsterLevel: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.error,
     fontWeight: '600',
   },
@@ -793,15 +791,15 @@ const styles = StyleSheet.create({
     gap: 8
   },
   monsterStat: {
-    fontSize: 10,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     fontWeight: '500',
   },
   noMonstersText: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textMuted,
     textAlign: 'center',
-    fontStyle: 'italic'
+    fontStyle: 'italic',
   },
   mapContainer: {
     marginBottom: 20,
@@ -886,7 +884,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   tileName: {
-    fontSize: 10,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     textAlign: 'center',
     fontWeight: '600',
@@ -903,9 +901,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   fogText: {
-    fontSize: 24,
+    ...RPGTextStyles.h1,
     color: Colors.textMuted,
-    fontWeight: 'bold'
+    fontWeight: '700',
   },
   legend: {
     marginBottom: 20,
@@ -921,11 +919,11 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   legendTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h3,
     color: Colors.text,
     marginBottom: 12,
-    textAlign: 'center'
+    textAlign: 'center',
+    fontWeight: '700',
   },
   legendGrid: {
     flexDirection: 'row',
@@ -949,7 +947,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   legendText: {
-    fontSize: 10,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     textAlign: 'center',
     fontWeight: '600',
@@ -967,23 +965,23 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   instructionsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h3,
     color: Colors.primary,
     marginBottom: 12,
-    textAlign: 'center'
+    textAlign: 'center',
+    fontWeight: '700',
   },
   instructionsText: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textSecondary,
-    lineHeight: 20
+    lineHeight: 20,
   },
   errorText: {
+    ...RPGTextStyles.body,
     color: Colors.error,
-    fontSize: 16,
     textAlign: 'center',
     marginTop: 50,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   tileWrapper: {
     position: 'relative'
@@ -1002,18 +1000,18 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   merchantSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h3,
     color: Colors.accent,
     marginBottom: 8,
-    textAlign: 'center'
+    textAlign: 'center',
+    fontWeight: '700',
   },
   merchantDescription: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 12,
-    lineHeight: 20
+    lineHeight: 20,
   },
   merchantButton: {
     backgroundColor: Colors.accent,

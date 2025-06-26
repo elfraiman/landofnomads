@@ -89,6 +89,7 @@ export interface Item {
   armor?: number;
   criticalChance?: number;
   dodgeChance?: number;
+  blockChance?: number; // Shield block chance percentage
 
   // Weapon properties
   handedness?: 'one-handed' | 'two-handed';
@@ -97,7 +98,7 @@ export interface Item {
   description: string;
 }
 
-export type ItemType = 'weapon' | 'armor' | 'helmet' | 'boots' | 'accessory';
+export type ItemType = 'weapon' | 'shield' | 'armor' | 'helmet' | 'boots' | 'accessory';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
 export interface CombatResult {
@@ -135,6 +136,8 @@ export interface DetailedBattleResult {
   combatLog: string[];
   timestamp: number;
   battleDuration: number;
+  weaponName?: string;  // Name of the weapon being used
+  weaponRarity?: string;  // Rarity of the weapon (common, uncommon, rare, epic, legendary, mythic)
 }
 
 export interface CombatRound {

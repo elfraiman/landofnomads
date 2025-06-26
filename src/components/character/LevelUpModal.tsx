@@ -4,7 +4,7 @@ import { Character, CharacterStats, StatType } from '../../types';
 import { spendStatPoint } from '../../utils/combatEngine';
 import { useGame } from '../../context/GameContext';
 import { useCustomAlert } from '../ui/CustomAlert';
-import { Colors } from '../../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
 
 interface LevelUpModalProps {
   character: Character;
@@ -226,16 +226,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    ...RPGTextStyles.heroTitle,
     color: Colors.primary,
     marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
   },
   subtitle: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.textSecondary,
   },
   pointsContainer: {
@@ -253,15 +249,11 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pointsNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    ...RPGTextStyles.statLarge,
     color: Colors.success,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   pointsLabel: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textSecondary,
     marginTop: 4,
   },
@@ -296,10 +288,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statName: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...RPGTextStyles.body,
     color: Colors.text,
-    marginBottom: 2,
+    fontWeight: '700',
   },
   statDesc: {
     fontSize: 12,
@@ -391,12 +382,20 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...RPGTextStyles.button,
     color: Colors.background,
   },
   confirmButtonTextDisabled: {
     color: Colors.textDisabled,
+  },
+  statValue: {
+    ...RPGTextStyles.stat,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  addButtonText: {
+    ...RPGTextStyles.h3,
+    color: Colors.background,
   },
 });
 

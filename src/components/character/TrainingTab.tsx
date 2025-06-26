@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Character, StatType } from '../../types';
 import { useGame } from '../../context/GameContext';
-import { Colors, ColorUtils } from '../../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
 
 interface TrainingTabProps {
   character: Character;
@@ -58,7 +58,7 @@ const TrainingTab: React.FC<TrainingTabProps> = ({ character }) => {
         </View>
 
         <View style={styles.trainingInfo}>
-          <Text style={styles.costText}>
+          <Text style={styles.trainingCost}>
             Cost: {cost.energy} energy, {cost.gold} gold
           </Text>
           <Text style={[styles.cooldownText, { color: isReady ? Colors.success : Colors.error }]}>
@@ -138,17 +138,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h1,
     color: Colors.primary,
     marginBottom: 8,
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
   },
   subtitle: {
-    fontSize: 14,
+    ...RPGTextStyles.body,
     color: Colors.textSecondary,
     marginBottom: 20,
     lineHeight: 20,
@@ -179,15 +175,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderAccent,
   },
   resourceLabel: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     marginBottom: 4,
     fontWeight: '600',
   },
   resourceValue: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.text,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   trainingList: {
     gap: 15,
@@ -212,7 +208,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   trainingLabel: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.text,
     fontWeight: '600',
   },
@@ -230,10 +226,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  costText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500',
+  trainingCost: {
+    ...RPGTextStyles.bodySmall,
+    color: Colors.warning,
+    fontWeight: '600',
   },
   cooldownText: {
     fontSize: 12,
@@ -259,10 +255,10 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   trainButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    ...RPGTextStyles.bodySmall,
     color: Colors.background,
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   disabledButtonText: {
     color: Colors.textMuted,
@@ -282,13 +278,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.body,
     color: Colors.primary,
-    marginBottom: 10,
+    marginBottom: 8,
+    fontWeight: '700',
   },
   infoText: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     lineHeight: 18,
   },

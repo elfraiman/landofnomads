@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 // RPG Dark Fantasy Color System - Inspired by Path of Exile and Medieval Aesthetics
 export const Colors = {
   // Core Background Colors
@@ -85,6 +87,7 @@ export const Colors = {
 
   // Equipment Slot Colors
   weapon: '#DC2626',              // Red for weapons
+  shield: '#3B82F6',              // Blue for shields
   armor: '#6B7280',               // Gray for armor
   accessory: '#A855F7',           // Purple for accessories
 
@@ -291,4 +294,235 @@ export const ColorUtils = {
       return { color: Colors.neutral, bold: false };
     }
   }
-}; 
+};
+
+// Typography System
+export const Typography = {
+  // Font families - using system fonts styled for RPG feel
+  fonts: {
+    // Primary display font - for titles and headers
+    display: Platform.select({
+      ios: 'Palatino', // Elegant serif with historical feel
+      android: 'serif',
+      default: 'serif'
+    }),
+    
+    // Secondary font - for UI elements and body text
+    body: Platform.select({
+      ios: 'Georgia', // Readable serif with character
+      android: 'serif',
+      default: 'serif'
+    }),
+    
+    // Accent font - for special elements
+    accent: Platform.select({
+      ios: 'Times New Roman', // Classic serif
+      android: 'serif',
+      default: 'serif'
+    }),
+    
+    // Monospace font - for stats and numbers
+    mono: Platform.select({
+      ios: 'Courier New',
+      android: 'monospace',
+      default: 'monospace'
+    })
+  },
+
+  // Font sizes
+  sizes: {
+    xs: 10,
+    sm: 12,
+    base: 14,
+    lg: 16,
+    xl: 18,
+    '2xl': 20,
+    '3xl': 24,
+    '4xl': 28,
+    '5xl': 32,
+    '6xl': 36,
+    '7xl': 42,
+    '8xl': 48,
+    '9xl': 60
+  },
+
+  // Font weights
+  weights: {
+    light: '300' as '300',
+    normal: '400' as '400',
+    medium: '500' as '500',
+    semibold: '600' as '600',
+    bold: '700' as '700',
+    extrabold: '800' as '800',
+    black: '900' as '900'
+  },
+
+  // Line heights
+  lineHeights: {
+    tight: 1.1,
+    snug: 1.2,
+    normal: 1.4,
+    relaxed: 1.6,
+    loose: 1.8
+  }
+};
+
+// Default text style - used as base for all text in the app
+// This ensures all Text components use our RPG typography by default
+export const DefaultTextStyle = {
+  fontFamily: Typography.fonts.body,
+  fontSize: Typography.sizes.base,
+  fontWeight: Typography.weights.normal,
+  color: Colors.text,
+  includeFontPadding: false, // Android-specific: removes extra padding
+  textAlignVertical: 'center' as 'center', // Better alignment on Android
+};
+
+// RPG Text Styles - Pre-defined styles for common use cases
+export const RPGTextStyles = {
+  // Default/base style that matches our default
+  default: {
+    ...DefaultTextStyle,
+  },
+  // Display styles
+  heroTitle: {
+    fontFamily: Typography.fonts.display,
+    fontSize: Typography.sizes['8xl'],
+    fontWeight: Typography.weights.black,
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 3, height: 3 },
+    textShadowRadius: 6,
+  },
+
+  title: {
+    fontFamily: Typography.fonts.display,
+    fontSize: Typography.sizes['6xl'],
+    fontWeight: Typography.weights.bold,
+    letterSpacing: 1.5,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+
+  subtitle: {
+    fontFamily: Typography.fonts.display,
+    fontSize: Typography.sizes['3xl'],
+    fontWeight: Typography.weights.semibold,
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  // Header styles
+  h1: {
+    fontFamily: Typography.fonts.display,
+    fontSize: Typography.sizes['5xl'],
+    fontWeight: Typography.weights.bold,
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 3,
+  },
+
+  h2: {
+    fontFamily: Typography.fonts.display,
+    fontSize: Typography.sizes['4xl'],
+    fontWeight: Typography.weights.semibold,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  h3: {
+    fontFamily: Typography.fonts.display,
+    fontSize: Typography.sizes['2xl'],
+    fontWeight: Typography.weights.semibold,
+    letterSpacing: 0.5,
+  },
+
+  // Body text styles
+  body: {
+    fontFamily: Typography.fonts.body,
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.normal,
+  },
+
+  bodyLarge: {
+    fontFamily: Typography.fonts.body,
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.normal,
+  },
+
+  bodySmall: {
+    fontFamily: Typography.fonts.body,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.normal,
+  },
+
+  // UI element styles
+  button: {
+    fontFamily: Typography.fonts.accent,
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.bold,
+    letterSpacing: 1,
+  },
+
+  label: {
+    fontFamily: Typography.fonts.body,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semibold,
+    letterSpacing: 0.5,
+  },
+
+  caption: {
+    fontFamily: Typography.fonts.body,
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.normal,
+    letterSpacing: 0.25,
+  },
+
+  // Special styles
+  stat: {
+    fontFamily: Typography.fonts.mono,
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.bold,
+    letterSpacing: 0.5,
+  },
+
+  statLarge: {
+    fontFamily: Typography.fonts.mono,
+    fontSize: Typography.sizes['3xl'],
+    fontWeight: Typography.weights.black,
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  medieval: {
+    fontFamily: Typography.fonts.accent,
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.medium,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as 'uppercase',
+  },
+
+  rune: {
+    fontFamily: Typography.fonts.accent,
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  }
+};
+
+// Helper function to create text styles with our default typography
+export const createTextStyle = (overrides: any = {}) => ({
+  ...DefaultTextStyle,
+  ...overrides,
+}); 

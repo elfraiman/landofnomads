@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert 
 import { useGame } from '../context/GameContext';
 import { characterClasses } from '../data/classes';
 import { CharacterClass } from '../types';
-import { Colors, ColorUtils } from '../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles } from '../utils/colors';
 
 interface CharacterCreationScreenProps {
   onCharacterCreated: () => void;
@@ -45,17 +45,6 @@ const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = ({ onCha
     return ColorUtils.getClassColor(classId);
   };
 
-  const getClassGradient = (classId: string): { primary: string; secondary: string } => {
-    switch (classId) {
-      case 'warrior': return { primary: '#FF6B35', secondary: '#FF8E53' };
-      case 'rogue': return { primary: '#32CD32', secondary: '#98FB98' };
-      case 'mage': return { primary: '#4A90E2', secondary: '#87CEEB' };
-      case 'paladin': return { primary: '#FFD700', secondary: '#FFF8DC' };
-      case 'berserker': return { primary: '#DC143C', secondary: '#FF6347' };
-      case 'archer': return { primary: '#8FBC8F', secondary: '#98FB98' };
-      default: return { primary: '#8b949e', secondary: '#a8b3c1' };
-    }
-  };
 
   const getStatIcon = (statType: string): string => {
     return '';
@@ -63,11 +52,11 @@ const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = ({ onCha
 
   const getStatColor = (statType: string): string => {
     switch (statType) {
-      case 'strength': return '#FF6B35';
-      case 'dexterity': return '#32CD32';
-      case 'constitution': return '#DC143C';
-      case 'intelligence': return '#4A90E2';
-      case 'speed': return '#FFD700';
+      case 'strength': return '#E67E5C';
+      case 'dexterity': return '#6AAF6A'; 
+      case 'constitution': return '#C15B5B';
+      case 'intelligence': return '#7FACD4';
+      case 'speed': return '#D4B650';
       default: return '#8b949e';
     }
   };
@@ -363,14 +352,13 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    ...RPGTextStyles.heroTitle,
     color: '#f0f6fc',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
+    ...RPGTextStyles.bodyLarge,
     color: '#8b949e',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -381,13 +369,12 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h2,
     color: '#f0f6fc',
     marginBottom: 8,
   },
   sectionSubtitle: {
-    fontSize: 14,
+    ...RPGTextStyles.body,
     color: '#8b949e',
     marginBottom: 16,
   },
@@ -397,20 +384,20 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   nameInput: {
+    ...RPGTextStyles.body,
     backgroundColor: '#21262d',
     borderWidth: 2,
     borderColor: '#30363d',
     borderRadius: 12,
     padding: 16,
-    fontSize: 16,
     color: '#f0f6fc',
     fontWeight: '500',
   },
   characterCount: {
+    ...RPGTextStyles.caption,
     position: 'absolute',
     right: 16,
     top: 16,
-    fontSize: 12,
     color: '#6e7681',
   },
 
@@ -431,24 +418,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   classIcon: {
-    fontSize: 32,
+    ...RPGTextStyles.statLarge,
     marginRight: 12,
   },
   classNameContainer: {
     flex: 1,
   },
   className: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h3,
     marginBottom: 2,
   },
   classPlaystyle: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: '#8b949e',
     fontStyle: 'italic',
   },
   classDescription: {
-    fontSize: 14,
+    ...RPGTextStyles.bodySmall,
     color: '#8b949e',
     lineHeight: 20,
     marginBottom: 16,
@@ -459,8 +445,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   statsTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    ...RPGTextStyles.label,
     color: '#f0f6fc',
     marginBottom: 8,
   },
@@ -474,17 +459,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statIcon: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     marginBottom: 2,
   },
   statLabel: {
-    fontSize: 10,
+    ...RPGTextStyles.caption,
     color: '#8b949e',
     marginBottom: 2,
   },
   statValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.stat,
   },
 
   // Primary Stat
@@ -497,13 +481,13 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   primaryStatLabel: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: '#8b949e',
     marginRight: 6,
   },
   primaryStatValue: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    ...RPGTextStyles.caption,
+    fontWeight: '700',
   },
 
   // Selection Indicator
@@ -516,8 +500,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   selectedText: {
-    fontSize: 10,
-    fontWeight: 'bold',
+    ...RPGTextStyles.caption,
+    fontWeight: '700',
     color: '#fff',
   },
 
@@ -537,21 +521,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   selectedClassIcon: {
+    ...RPGTextStyles.statLarge,
     fontSize: 40,
     marginRight: 16,
   },
   selectedClassName: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h1,
     marginBottom: 4,
   },
   selectedClassPlaystyle: {
-    fontSize: 12,
+    ...RPGTextStyles.body,
     color: '#8b949e',
     fontStyle: 'italic',
   },
   selectedClassDescription: {
-    fontSize: 14,
+    ...RPGTextStyles.body,
     color: '#8b949e',
     lineHeight: 20,
   },
@@ -561,13 +545,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   growthTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.body,
+    fontWeight: '700',
     color: '#f0f6fc',
     marginBottom: 4,
   },
   growthSubtitle: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: '#8b949e',
     marginBottom: 12,
   },
@@ -585,11 +569,11 @@ const styles = StyleSheet.create({
     minWidth: '30%',
   },
   growthIcon: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     marginBottom: 4,
   },
   growthLabel: {
-    fontSize: 11,
+    ...RPGTextStyles.caption,
     color: '#8b949e',
     marginBottom: 4,
   },
@@ -599,28 +583,29 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   growthValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    ...RPGTextStyles.label,
+    fontWeight: '700',
   },
   growthIndicator: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
   },
 
   // Builds Section
   buildsSection: {},
   buildsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.body,
+    fontWeight: '700',
     color: '#f0f6fc',
     marginBottom: 8,
   },
   buildDescription: {
-    fontSize: 13,
+    ...RPGTextStyles.bodySmall,
     color: '#8b949e',
     lineHeight: 20,
   },
   buildName: {
-    fontWeight: 'bold',
+    ...RPGTextStyles.bodySmall,
+    fontWeight: '700',
     color: '#f0f6fc',
   },
 
@@ -637,8 +622,7 @@ const styles = StyleSheet.create({
     borderColor: '#30363d !important',
   },
   createButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...RPGTextStyles.button,
   },
 
   // Footer
@@ -647,7 +631,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   footerText: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: '#6e7681',
     textAlign: 'center',
     fontStyle: 'italic',

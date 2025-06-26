@@ -5,6 +5,7 @@ import { Colors, ColorUtils } from '../../utils/colors';
 import { useGame } from '../../context/GameContext';
 import { ItemStatsDisplay } from '../ui/ItemStatsDisplay';
 import { StatusBar } from '../ui/StatusBar';
+import { CombatLog } from '../ui/CombatLog';
 
 interface BattleResultsModalProps {
   battleResult: DetailedBattleResult | null;
@@ -101,12 +102,15 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
   // Render a single combat log entry with proper coloring
   const renderCombatLogEntry = (entry: string, index: number) => {
     const playerName = battleResult?.playerName || 'Player';
+    const weaponName = battleResult?.weaponName;
+    const weaponRarity = battleResult?.weaponRarity || 'common';
 
     // Use colors from global Colors utility
     const hitColor = Colors.gold; // Yellow/gold for normal hits
     const criticalColor = Colors.criticalDamage; // Red for critical hits
     const missColor = Colors.miss; // Light gray for misses
     const dodgeColor = Colors.dodge; // Light blue for dodges
+    const weaponColor = ColorUtils.getRarityColor(weaponRarity);
 
     // Check what type of action this is
     const isCritical = entry.includes('CRITICAL HIT') || entry.includes('DEVASTATING CRITICAL HIT');
@@ -114,15 +118,96 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
     const isDodge = entry.includes('dodge');
     const hasAttack = entry.includes('strikes') || entry.includes('damage');
 
-    // Function to highlight damage numbers
+    // Function to highlight damage numbers and weapon name
     const highlightDamageNumbers = (text: string, damageColor: string) => {
       const parts = [];
       const damagePattern = /(\d+)(\s+damage)/gi;
       let lastIndex = 0;
       let match;
 
+      // Find weapon name in text
+      const withTheirPattern = /with their ([^!.]*?)(?=\s(?:at|to|for|but|and|[!.]))/i;
+      const swingsTheirPattern = /swings their ([^!.]*?)(?=\s(?:at|to|for|but|and|[!.]))/i;
+      const dodgesPattern = new RegExp(`dodges ${playerName}'s ([^!.]*?)(?=\\s(?:at|to|for|but|and|[!.]))`);
+      // Fallback pattern for cases where "with their" might be missing
+      const strikesPattern = new RegExp(`${playerName} strikes ([^!.]*?)(?=\\s(?:at|to|for|but|and|[!.]))`, 'i');
+
+      // Try to find weapon name using any of the patterns
+      const withTheirMatch = text.match(withTheirPattern);
+      const swingsMatch = text.match(swingsTheirPattern);
+      const dodgesMatch = text.match(dodgesPattern);
+      const fallbackMatch = text.match(strikesPattern);
+      
+      const weaponMatch = withTheirMatch || swingsMatch || dodgesMatch || fallbackMatch;
+
+      if (weaponMatch) {
+        const beforeWeaponText = text.substring(0, weaponMatch.index);
+        const afterWeaponText = text.substring(weaponMatch.index! + weaponMatch[0].length);
+
+        // Add text before weapon name
+        if (beforeWeaponText) {
+          parts.push(
+            <Text key={`before-weapon`} style={{ color: Colors.neutral }}>
+              {beforeWeaponText}
+            </Text>
+          );
+        }
+
+        // Add the weapon name with rarity color
+        parts.push(
+          <Text key="weapon" style={{ color: weaponColor, fontWeight: 'bold' }}>
+            {weaponMatch[1]}
+          </Text>
+        );
+
+        // Process the rest of the text for damage numbers
+        if (afterWeaponText) {
+          let lastDamageIndex = 0;
+          let damageMatch;
+          const remainingText = afterWeaponText;
+
+          while ((damageMatch = damagePattern.exec(remainingText)) !== null) {
+            // Add text before damage number
+            if (damageMatch.index > lastDamageIndex) {
+              parts.push(
+                <Text key={`after-weapon-${damageMatch.index}`} style={{ color: Colors.neutral }}>
+                  {remainingText.substring(lastDamageIndex, damageMatch.index)}
+                </Text>
+              );
+            }
+
+            // Add damage number
+            parts.push(
+              <Text key={`damage-${damageMatch.index}`} style={{ color: damageColor, fontWeight: 'bold' }}>
+                {damageMatch[1]}
+              </Text>
+            );
+
+            // Add " damage" text
+            parts.push(
+              <Text key={`damage-text-${damageMatch.index}`} style={{ color: Colors.neutral }}>
+                {damageMatch[2]}
+              </Text>
+            );
+
+            lastDamageIndex = damageMatch.index + damageMatch[0].length;
+          }
+
+          // Add remaining text after last damage number
+          if (lastDamageIndex < remainingText.length) {
+            parts.push(
+              <Text key="after-weapon-final" style={{ color: Colors.neutral }}>
+                {remainingText.substring(lastDamageIndex)}
+              </Text>
+            );
+          }
+        }
+
+        return parts;
+      }
+
+      // If no weapon pattern found, just process damage numbers as before
       while ((match = damagePattern.exec(text)) !== null) {
-        // Add text before the damage number
         if (match.index > lastIndex) {
           parts.push(
             <Text key={`before-${match.index}`} style={{ color: Colors.neutral }}>
@@ -131,14 +216,12 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
           );
         }
 
-        // Add the damage number with special color
         parts.push(
           <Text key={`damage-${match.index}`} style={{ color: damageColor, fontWeight: 'bold' }}>
             {match[1]}
           </Text>
         );
 
-        // Add " damage" part
         parts.push(
           <Text key={`damage-text-${match.index}`} style={{ color: Colors.neutral }}>
             {match[2]}
@@ -148,7 +231,6 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
         lastIndex = match.index + match[0].length;
       }
 
-      // Add remaining text
       if (lastIndex < text.length) {
         parts.push(
           <Text key={`remaining-${lastIndex}`} style={{ color: Colors.neutral }}>
@@ -157,7 +239,6 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
         );
       }
 
-      // If no damage found, return original text
       if (parts.length === 0) {
         parts.push(
           <Text key="original" style={{ color: Colors.neutral }}>
@@ -352,42 +433,12 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
             </View>
 
             {/* Combat Log Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Combat Log</Text>
-              <ScrollView style={styles.combatLogContainer} nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
-                {combatLog && combatLog.length > 0 ? (
-                  combatLog.map((entry, index) => {
-                    return renderCombatLogEntry(entry, index);
-                  })
-                ) : (
-                  <Text style={[styles.combatLogEntry, { color: Colors.textSecondary, fontStyle: 'italic' }]}>
-                    No combat log available
-                  </Text>
-                )}
-              </ScrollView>
-            </View>
-
-            {/* Monsters Defeated Section */}
-            {/*    {monstersKilled.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Monsters Defeated</Text>
-                {monstersKilled.map((monster, index) => (
-                  <View key={index} style={styles.monsterItem}>
-                    <Text style={styles.monsterName}>
-                      {monster.name} (Level {monster.level})
-                    </Text>
-                    <View style={styles.monsterRewards}>
-                      <Text style={[styles.rewardText, { color: Colors.experience }]}>
-                        +{monster.experience} XP
-                      </Text>
-                      <Text style={[styles.rewardText, { color: Colors.gold }]}>
-                        +{monster.gold} Gold
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )} */}
+            <CombatLog
+              entries={combatLog}
+              playerName={battleResult?.playerName || 'Player'}
+              weaponName={battleResult?.weaponName}
+              weaponRarity={battleResult?.weaponRarity}
+            />
 
             {/* Health Status Section */}
             <StatusBar
@@ -634,16 +685,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'right',
-  },
-  combatLogContainer: {
-    backgroundColor: Colors.background,
-    borderRadius: 6,
-    maxHeight: 250,
-    minHeight: 150,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   combatLogEntry: {
     fontSize: 13,

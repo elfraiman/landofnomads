@@ -3,13 +3,11 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'rea
 import { Character, CombatResult, CombatRound } from '../../types';
 import { useGame } from '../../context/GameContext';
 import BattleViewer from './BattleViewer';
-import { Colors, ColorUtils } from '../../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
 
 interface CombatTabProps {
   character: Character;
 }
-
-
 
 const CombatTab: React.FC<CombatTabProps> = ({ character }) => {
   const [isBattling, setIsBattling] = useState(false);
@@ -43,8 +41,6 @@ const CombatTab: React.FC<CombatTabProps> = ({ character }) => {
       setIsBattling(false);
     }
   };
-
-
 
   return (
     <ScrollView style={styles.container}>
@@ -154,20 +150,16 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h1,
     color: Colors.primary,
     marginBottom: 8,
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
   },
   subtitle: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.textSecondary,
-    marginBottom: 25,
-    lineHeight: 22,
+    marginBottom: 20,
+    lineHeight: 20,
     textAlign: 'center',
   },
   battleArea: {
@@ -223,33 +215,29 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderAccent,
   },
   statLabel: {
-    fontSize: 12,
+    ...RPGTextStyles.bodySmall,
     color: Colors.textSecondary,
-    marginBottom: 6,
+    marginBottom: 4,
     fontWeight: '600',
   },
   statValue: {
-    fontSize: 20,
+    ...RPGTextStyles.h3,
     color: Colors.text,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   section: {
     marginBottom: 25,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h2,
     color: Colors.text,
     marginBottom: 15,
     borderBottomWidth: 2,
     borderBottomColor: Colors.primary,
     paddingBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   emptyText: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.textMuted,
     textAlign: 'center',
     fontStyle: 'italic',
@@ -281,21 +269,21 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   historyResult: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.body,
+    fontWeight: '700',
   },
   historyDate: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textMuted,
   },
   historyOpponent: {
-    fontSize: 16,
+    ...RPGTextStyles.body,
     color: Colors.text,
     marginBottom: 4,
     fontWeight: '600',
   },
   historyDetails: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
   },
   infoBox: {

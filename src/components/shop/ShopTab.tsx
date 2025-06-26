@@ -5,7 +5,7 @@ import { useGame } from '../../context/GameContext';
 import { generateShopInventory, getWeaponsByBuildType, RARITY_WEIGHTS } from '../../data/items';
 import { useCustomAlert } from '../ui/CustomAlert';
 import { ItemStatsDisplay } from '../ui/ItemStatsDisplay';
-import { Colors, ColorUtils } from '../../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
 
 interface ShopTabProps {
   character: Character;
@@ -137,7 +137,7 @@ const ShopTab: React.FC<ShopTabProps> = ({ character }) => {
     const buildWeaponNames = buildWeapons.map(w => w.name);
 
     return shopState.inventory.filter(item =>
-      item.type === 'weapon' ? buildWeaponNames.includes(item.name.replace(/ \+\d+$/, '')) : true
+      (item.type === 'weapon' || item.type === 'shield') ? buildWeaponNames.includes(item.name.replace(/ \+\d+$/, '')) : true
     );
   };
 
@@ -278,12 +278,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...RPGTextStyles.h1,
     color: Colors.primary,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   goldContainer: {
     backgroundColor: Colors.surface,
@@ -299,17 +297,15 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   goldText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.stat,
     color: Colors.gold,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    fontWeight: '700',
   },
   subtitle: {
-    fontSize: 14,
+    ...RPGTextStyles.body,
     color: Colors.textSecondary,
     marginBottom: 20,
+    lineHeight: 20,
     textAlign: 'center',
   },
   controlsContainer: {
@@ -522,18 +518,38 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...RPGTextStyles.body,
     color: Colors.primary,
     marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    fontWeight: '700',
   },
   infoText: {
-    fontSize: 12,
+    ...RPGTextStyles.caption,
     color: Colors.textSecondary,
     lineHeight: 18,
+  },
+  sectionTitle: {
+    ...RPGTextStyles.h2,
+    color: Colors.primary,
+    marginBottom: 15,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.primary,
+    paddingBottom: 5,
+  },
+  buyButtonText: {
+    ...RPGTextStyles.bodySmall,
+    color: Colors.background,
+    fontWeight: '700',
+  },
+  buyButtonTextDisabled: {
+    color: Colors.textMuted,
+  },
+  emptyShopText: {
+    ...RPGTextStyles.body,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    padding: 30,
   },
 });
 
