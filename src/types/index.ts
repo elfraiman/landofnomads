@@ -36,6 +36,9 @@ export interface Character {
   // Training cooldowns
   lastTraining: Record<StatType, number>;
 
+  // Active gem effects
+  activeGemEffects: ActiveGemEffect[];
+
   // Creation timestamp
   createdAt: number;
   lastActive: number;
@@ -98,8 +101,32 @@ export interface Item {
   description: string;
 }
 
-export type ItemType = 'weapon' | 'shield' | 'armor' | 'helmet' | 'boots' | 'accessory';
+export type ItemType = 'weapon' | 'shield' | 'armor' | 'helmet' | 'boots' | 'accessory' | 'gem';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+export type GemType = 'ruby' | 'sapphire' | 'emerald' | 'diamond' | 'opal';
+export type GemTier = 'flawed' | 'normal' | 'greater' | 'perfect' | 'legendary';
+
+export interface Gem extends Omit<Item, 'type'> {
+  type: 'gem';
+  gemType: GemType;
+  gemTier: GemTier;
+  consumeEffect: {
+    statBonus: Partial<CharacterStats>;
+    duration: number; // number of battles the effect lasts
+    description: string;
+  };
+}
+
+export interface ActiveGemEffect {
+  gemName: string;
+  gemType: GemType;
+  gemTier: GemTier;
+  statBonus: Partial<CharacterStats>;
+  battlesRemaining: number;
+  description: string;
+  appliedAt: number;
+}
 
 export interface CombatResult {
   id: string;

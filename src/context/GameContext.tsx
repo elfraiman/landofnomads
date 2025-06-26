@@ -38,6 +38,11 @@ interface GameContextType {
   sellItem: (itemId: string) => void;
   purchaseItem: (item: Item) => boolean;
 
+  // Gem system
+  consumeGem: (gemId: string) => boolean;
+  fuseGems: (gemIds: string[]) => boolean;
+  getActiveGemEffects: () => string[];
+
   // Energy system
   regenerateEnergy: () => void;
 
@@ -72,6 +77,7 @@ interface GameContextType {
   saveGame: () => Promise<void>;
   loadGame: () => Promise<void>;
   debugSaveData: () => Promise<void>;
+  addTestItem: () => void;
 
   // Experience system
   getExperienceForLevel: (level: number) => number;
@@ -198,6 +204,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           intelligence: 0,
           speed: 0
         },
+        activeGemEffects: [], // Start with no gem effects
         createdAt: Date.now(),
         lastActive: Date.now()
       };
@@ -387,6 +394,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    // Gems cannot be equipped, they are consumables
+    if (item.type === 'gem') {
+      console.log('Cannot equip gems - they are consumables');
+      return;
+    }
+
     const character = gameState.currentCharacter;
     console.log('Equipping item:', item.name, 'to character:', character.name);
     console.log('Character inventory before:', character.inventory?.length || 0, 'items');
@@ -449,15 +462,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       targetSlot = 'offHand';
       currentEquipped = character.equipment.offHand;
     } else {
-      // For other item types, use direct mapping
-      const slotMap: Record<Exclude<ItemType, 'weapon' | 'shield'>, keyof Character['equipment']> = {
+      // For other item types, use direct mapping (gems are not equipment)
+      const slotMap: Record<Exclude<ItemType, 'weapon' | 'shield' | 'gem'>, keyof Character['equipment']> = {
         armor: 'armor',
         helmet: 'helmet',
         boots: 'boots',
         accessory: 'accessory'
       };
 
-      targetSlot = slotMap[item.type as Exclude<ItemType, 'weapon' | 'shield'>];
+      targetSlot = slotMap[item.type as Exclude<ItemType, 'weapon' | 'shield' | 'gem'>];
       currentEquipped = character.equipment[targetSlot];
     }
 
@@ -559,13 +572,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const addItemToInventory = (item: Item) => {
-    if (!gameState.currentCharacter) return;
+    if (!gameState.currentCharacter) {
+      console.error('❌ Cannot add item: no current character');
+      return;
+    }
 
     const character = gameState.currentCharacter;
+    console.log(`📦 Adding ${item.name} to ${character.name}'s inventory (current inventory size: ${character.inventory.length})`);
+    
     const updatedCharacter = {
       ...character,
       inventory: [...character.inventory, item]
     };
+
+    console.log(`📦 Updated inventory size: ${updatedCharacter.inventory.length}`);
 
     setGameState(prev => ({
       ...prev,
@@ -574,6 +594,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         c.id === character.id ? updatedCharacter : c
       )
     }));
+
+    // Save the game after adding item to inventory
+    setTimeout(() => {
+      console.log('💾 Saving game after item addition...');
+      saveGame();
+    }, 100);
   };
 
   const removeItemFromInventory = (itemId: string) => {
@@ -972,6 +998,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     });
 
+    // RARE GEM DROPS (5% base chance, higher for rare monsters)
+    const gemDropChance = 0.05 + (rarityMultiplier - 1) * 0.02; // 5% base, up to 9% for boss
+    if (Math.random() <= gemDropChance) {
+      // Import gem generation function
+      const { generateRandomGem } = require('../data/gems');
+      const gem = generateRandomGem(monster.level);
+      droppedItems.push(gem);
+    }
+
     return { gold: totalGold, experience: totalExperience, items: droppedItems };
   };
 
@@ -1097,6 +1132,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           intelligence: 0,
           speed: 0
         },
+        activeGemEffects: [], // Monsters don't have gem effects
         createdAt: Date.now(),
         lastActive: Date.now()
       };
@@ -1147,21 +1183,37 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const lootResult = generateLoot(spawnedMonster.monster, character.level);
 
         // Add actual items to inventory (not string IDs)
+        console.log(`🎁 Loot generated: ${lootResult.items.length} items`, lootResult.items.map(i => `${i.name} (${i.type})`));
+        
         lootResult.items.forEach(item => {
+          console.log(`📦 Adding item to inventory: ${item.name} (${item.type}, ID: ${item.id})`);
           addItemToInventory(item);
 
-          // Show notification for item drop
-          addNotification({
-            type: 'item_drop',
-            title: 'Item Found!',
-            message: `${spawnedMonster.monster.name} dropped an item!`,
-            itemDetails: {
-              name: item.name,
-              level: item.level,
-              rarity: item.rarity
-            },
-            duration: 3000
-          });
+          // Show special notification for gem drops
+          if (item.type === 'gem') {
+            const gem = item as any; // Gem type
+            console.log(`💎 Gem dropped: ${gem.name} (${gem.gemType}, ${gem.gemTier})`);
+            addNotification({
+              type: 'gem_drop',
+              title: '💎 Rare Gem Found!',
+              message: `${spawnedMonster.monster.name} dropped a ${gem.name}! This valuable gem can boost your stats or be fused with others for greater power.`,
+              duration: 5000
+            });
+          } else {
+            console.log(`🎁 Regular item dropped: ${item.name} (${item.type})`);
+            // Show notification for regular item drop
+            addNotification({
+              type: 'item_drop',
+              title: 'Item Found!',
+              message: `${spawnedMonster.monster.name} dropped an item!`,
+              itemDetails: {
+                name: item.name,
+                level: item.level,
+                rarity: item.rarity
+              },
+              duration: 3000
+            });
+          }
         });
 
         // Update rewards with actual loot
@@ -1181,7 +1233,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         // Apply rewards and update character
-        const updatedCharacter = {
+        let updatedCharacter = {
           ...character,
           experience: character.experience + rewards.experience,
           gold: character.gold + rewards.gold,
@@ -1189,16 +1241,39 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           wins: character.wins + 1
         };
 
+        // Update gem effects after combat (reduce duration)
+        try {
+          const { updateGemEffectsAfterCombat } = require('../utils/combatEngine');
+          updatedCharacter = updateGemEffectsAfterCombat(updatedCharacter);
+        } catch (error) {
+          console.error('Failed to update gem effects after combat:', error);
+        }
+
         updateCharacter(updatedCharacter);
         removeDeadMonster(spawnedMonsterId);
+        
+        // Save the game after successful combat
+        setTimeout(() => saveGame(), 200);
       } else {
         // Apply defeat penalty
-        const updatedCharacter = {
+        let updatedCharacter = {
           ...character,
           currentHealth: playerHealthAfter,
           losses: character.losses + 1
         };
+
+        // Update gem effects after combat (reduce duration) even on defeat
+        try {
+          const { updateGemEffectsAfterCombat } = require('../utils/combatEngine');
+          updatedCharacter = updateGemEffectsAfterCombat(updatedCharacter);
+        } catch (error) {
+          console.error('Failed to update gem effects after combat:', error);
+        }
+
         updateCharacter(updatedCharacter);
+        
+        // Save the game after defeat
+        setTimeout(() => saveGame(), 200);
       }
 
       // Generate clean, detailed combat log
@@ -1541,23 +1616,46 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const debugSaveData = async () => {
     try {
-      const savedData = await PlatformStorage.getItem(STORAGE_KEY);
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        console.log('=== SAVE DATA DEBUG ===');
-        console.log('Platform:', PlatformStorage.getPlatformInfo());
-        console.log('Characters:', parsedData.characters?.length || 0);
-        console.log('Current Character:', parsedData.currentCharacter?.name || 'None');
-        console.log('Wilderness State:', parsedData.wildernessState ? 'Present' : 'Missing');
-        console.log('Last Save:', new Date(parsedData.lastSave).toLocaleString());
-        console.log('Data size:', savedData.length, 'characters');
-        console.log('======================');
-      } else {
-        console.log('No save data found');
-      }
+      const dataToSave = {
+        ...gameState,
+        wildernessState,
+        lastSave: Date.now()
+      };
+      console.log('=== DEBUG SAVE DATA ===');
+      console.log('Current Character:', gameState.currentCharacter?.name);
+      console.log('Character Inventory Length:', gameState.currentCharacter?.inventory?.length || 0);
+      console.log('Character Inventory Items:', gameState.currentCharacter?.inventory?.map(i => i.name) || []);
+      console.log('Character Gold:', gameState.currentCharacter?.gold);
+      console.log('Character Experience:', gameState.currentCharacter?.experience);
+      console.log('Wilderness State:', wildernessState ? 'exists' : 'null');
+      console.log('Save Data Size:', JSON.stringify(dataToSave).length, 'characters');
+      console.log('=== END DEBUG ===');
     } catch (err) {
-      console.error('Failed to debug save data:', err);
+      console.error('Debug save data error:', err);
     }
+  };
+
+  // TEST FUNCTION: Add a test item to inventory
+  const addTestItem = () => {
+    if (!gameState.currentCharacter) {
+      console.error('❌ No current character for test');
+      return;
+    }
+
+    console.log('🧪 Creating test item...');
+    const testItem = generateItem(baseItems[0], 5); // Generate a level 5 iron sword
+    console.log('🧪 Test item created:', testItem.name, testItem.id);
+    
+    addItemToInventory(testItem);
+    console.log('🧪 Test item added to inventory');
+    
+    // Also test gem generation
+    const { generateRandomGem } = require('../data/gems');
+    const testGem = generateRandomGem(5);
+    console.log('🧪 Test gem created:', testGem.name, testGem.id);
+    
+    addItemToInventory(testGem);
+    console.log('🧪 Test gem added to inventory');
   };
 
   // Portal/Map system functions
@@ -1637,6 +1735,86 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return Math.max(0, nextLevelExp - char.experience);
   };
 
+  // Gem system functions
+  const consumeGem = (gemId: string): boolean => {
+    if (!gameState.currentCharacter) return false;
+
+    const character = gameState.currentCharacter;
+    const gem = character.inventory.find(item => item.id === gemId && item.type === 'gem');
+    
+    if (!gem) return false;
+
+    try {
+      const { consumeGem: consumeGemUtil } = require('../utils/combatEngine');
+      const updatedCharacter = consumeGemUtil(character, gem);
+      
+      updateCharacter(updatedCharacter);
+      
+      addNotification({
+        type: 'success',
+        title: 'Gem Consumed!',
+        message: `${gem.name} consumed. ${(gem as any).consumeEffect?.description || 'Effect applied!'}`,
+        duration: 3000
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to consume gem:', error);
+      return false;
+    }
+  };
+
+  const fuseGems = (gemIds: string[]): boolean => {
+    if (!gameState.currentCharacter) return false;
+
+    const character = gameState.currentCharacter;
+    const gems = gemIds.map(id => character.inventory.find(item => item.id === id && item.type === 'gem')).filter(Boolean) as any[];
+    
+    if (gems.length < 2) return false;
+
+    try {
+      const { fuseGems: fuseGemsUtil } = require('../data/gems');
+      const fusedGem = fuseGemsUtil(gems);
+      
+      if (!fusedGem) return false;
+
+      // Remove consumed gems and add fused gem
+      const updatedCharacter = {
+        ...character,
+        inventory: [
+          ...character.inventory.filter(item => !gemIds.includes(item.id)),
+          fusedGem
+        ]
+      };
+      
+      updateCharacter(updatedCharacter);
+      
+      addNotification({
+        type: 'success',
+        title: 'Gems Fused!',
+        message: `${gems.length} ${gems[0].name}s fused into ${fusedGem.name}!`,
+        duration: 3000
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to fuse gems:', error);
+      return false;
+    }
+  };
+
+  const getActiveGemEffects = (): string[] => {
+    if (!gameState.currentCharacter) return [];
+
+    try {
+      const { getActiveGemEffectsSummary } = require('../utils/combatEngine');
+      return getActiveGemEffectsSummary(gameState.currentCharacter);
+    } catch (error) {
+      console.error('Failed to get gem effects:', error);
+      return [];
+    }
+  };
+
   const contextValue: GameContextType = {
     gameState,
     currentCharacter: gameState.currentCharacter || null,
@@ -1655,6 +1833,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     removeItemFromInventory,
     sellItem,
     purchaseItem,
+    consumeGem,
+    fuseGems,
+    getActiveGemEffects,
     regenerateEnergy,
     checkLevelUp,
     performLevelUp,
@@ -1673,9 +1854,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     notifications,
     addNotification,
     dismissNotification,
-    saveGame,
-    loadGame,
-    debugSaveData,
+          saveGame,
+      loadGame,
+      debugSaveData,
+      addTestItem,
     getExperienceForLevel,
     getExperiencePercentage,
     getExperienceToNextLevel,

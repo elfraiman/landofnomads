@@ -7,12 +7,13 @@ import TrainingTab from '../components/character/TrainingTab';
 import CombatTab from '../components/combat/CombatTab';
 import EquipmentTab from '../components/character/EquipmentTab';
 import InventoryTab from '../components/character/InventoryTab';
+import { GemTab } from '../components/character/GemTab';
 
 import { WildernessTab } from '../components/wilderness/WildernessTab';
 import LevelUpModal from '../components/character/LevelUpModal';
 import { NotificationSystem } from '../components/ui/NotificationSystem';
 
-type TabType = 'stats' | 'training' | 'combat' | 'equipment' | 'inventory' | 'wilderness';
+type TabType = 'stats' | 'training' | 'combat' | 'equipment' | 'inventory' | 'gems' | 'wilderness';
 
 interface GameScreenProps {
   onLogout: () => void;
@@ -21,7 +22,7 @@ interface GameScreenProps {
 const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<TabType>('stats');
   const [showLevelUpModal, setShowLevelUpModal] = useState(false);
-  const { currentCharacter, checkLevelUp, performLevelUp, error, notifications, dismissNotification, saveGame, debugSaveData } = useGame();
+  const { currentCharacter, checkLevelUp, performLevelUp, error, notifications, dismissNotification, saveGame, debugSaveData, addTestItem } = useGame();
 
   // Tab configuration for easy management
   const tabs = [
@@ -30,6 +31,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
     { id: 'combat' as TabType, label: 'Combat', emoji: '' },
     { id: 'equipment' as TabType, label: 'Equipment', emoji: '' },
     { id: 'inventory' as TabType, label: 'Inventory', emoji: '' },
+    { id: 'gems' as TabType, label: 'Gems', emoji: '💎' },
     { id: 'wilderness' as TabType, label: 'Wilderness', emoji: '' },
   ];
 
@@ -71,6 +73,8 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
         return <EquipmentTab character={currentCharacter} />;
       case 'inventory':
         return <InventoryTab character={currentCharacter} />;
+      case 'gems':
+        return <GemTab />;
       case 'wilderness':
         return <WildernessTab />;
       default:
@@ -114,6 +118,16 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
           )}
         </View>
         <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={[styles.logoutButton, { backgroundColor: Colors.success, marginRight: 10 }]} 
+            onPress={() => {
+              console.log('🧪 Test button pressed');
+              addTestItem();
+              debugSaveData();
+            }}
+          >
+            <Text style={styles.logoutButtonText}>TEST</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
             <Text style={styles.logoutButtonText}>Switch</Text>
           </TouchableOpacity>
@@ -128,17 +142,28 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
           contentContainerStyle={styles.tabScrollContent}
           style={styles.tabScroll}
         >
-          {tabs.map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[styles.tab, activeTab === tab.id && styles.activeTab]}
-              onPress={() => setActiveTab(tab.id)}
-            >
-              <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {tabs.map((tab) => {
+            const gemCount = tab.id === 'gems' ? currentCharacter.inventory.filter(item => item.type === 'gem').length : 0;
+            
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.tab, activeTab === tab.id && styles.activeTab]}
+                onPress={() => setActiveTab(tab.id)}
+              >
+                <View style={styles.tabContent}>
+                  <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>
+                    {tab.emoji} {tab.label}
+                  </Text>
+                  {tab.id === 'gems' && gemCount > 0 && (
+                    <View style={styles.gemBadge}>
+                      <Text style={styles.gemBadgeText}>{gemCount}</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -354,6 +379,28 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  tabContent: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  gemBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -12,
+    backgroundColor: Colors.accent,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  gemBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: Colors.background,
   },
   errorText: {
     ...RPGTextStyles.h3,

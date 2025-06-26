@@ -20,7 +20,7 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
   visible,
   onClose,
 }) => {
-  const { currentCharacter, getExperiencePercentage, getExperienceToNextLevel } = useGame();
+  const { currentCharacter, getExperiencePercentage, getExperienceToNextLevel, getActiveGemEffects } = useGame();
 
   if (!visible || !battleResult) return null;
 
@@ -375,6 +375,36 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
               <View style={styles.buffsContainer}>
                 {currentCharacter ? (
                   <>
+                    {/* Active Gem Effects */}
+                    {(() => {
+                      const activeGemEffects = getActiveGemEffects();
+                      return activeGemEffects.length > 0 ? (
+                        activeGemEffects.map((effect: string, index: number) => {
+                          // Parse the effect string: "Gem Name: Description (X battles left)"
+                          const parts = effect.split(': ');
+                          const gemName = parts[0];
+                          const remainingPart = parts[1] || '';
+                          const descriptionMatch = remainingPart.match(/^(.+)\s+\((\d+)\s+battles?\s+left\)$/);
+                          const description = descriptionMatch ? descriptionMatch[1] : remainingPart;
+                          const battlesLeft = descriptionMatch ? descriptionMatch[2] : '?';
+                          
+                          return (
+                            <View key={`gem-${index}`} style={[styles.buffItem, styles.gemBuff]}>
+                              <View style={styles.buffHeader}>
+                                <Text style={styles.buffSource}>💎 {gemName}</Text>
+                                <Text style={styles.buffDuration}>({battlesLeft} battles left)</Text>
+                              </View>
+                              <View style={styles.buffEffects}>
+                                <View style={[styles.buffChip, styles.gemBuffChip]}>
+                                  <Text style={styles.buffText}>{description}</Text>
+                                </View>
+                              </View>
+                            </View>
+                          );
+                        })
+                      ) : null;
+                    })()}
+
                     {/* Active Auras - Future implementation */}
                     {/* This section will be populated with active auras that the player has acquired */}
                     {/* 
@@ -419,10 +449,12 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
                     */}
 
                     {/* Show message when no active buffs */}
-                    <View style={styles.noBuffsContainer}>
-                      <Text style={styles.noBuffsText}>No active buffs or auras</Text>
-                      <Text style={styles.noBuffsSubtext}>Acquire auras and use consumables to gain temporary bonuses!</Text>
-                    </View>
+                    {getActiveGemEffects().length === 0 && (
+                      <View style={styles.noBuffsContainer}>
+                        <Text style={styles.noBuffsText}>No active buffs or auras</Text>
+                        <Text style={styles.noBuffsSubtext}>Consume gems or acquire auras to gain temporary bonuses!</Text>
+                      </View>
+                    )}
                   </>
                 ) : (
                   <View style={styles.noBuffsContainer}>
@@ -880,6 +912,20 @@ const styles = StyleSheet.create({
   },
   auraChip: {
     backgroundColor: Colors.experience,
+  },
+  // Gem buff styles
+  gemBuff: {
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.accent,
+  },
+  buffDuration: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  gemBuffChip: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
   },
   // Experience bar styles
   experienceContainer: {

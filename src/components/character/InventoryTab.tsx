@@ -84,9 +84,17 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
           ]
         );
       }
+    } else if (item.type === 'gem') {
+      // Gems cannot be equipped - they are consumables
+      showAlert(
+        'Cannot Equip Gem',
+        'Gems are consumable items that provide temporary stat boosts. Go to the Gems tab to consume or fuse them.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
     } else {
-      // For non-weapons, use the existing logic
-      const slotMap: Record<ItemType, keyof Character['equipment']> = {
+      // For non-weapons and non-gems, use the existing logic
+      const slotMap: Record<Exclude<ItemType, 'gem'>, keyof Character['equipment']> = {
         weapon: 'mainHand', // This won't be used due to above check
         shield: 'offHand',  // Shields go to off-hand
         armor: 'armor',
@@ -95,7 +103,7 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
         accessory: 'accessory'
       };
 
-      const slot = slotMap[item.type];
+      const slot = slotMap[item.type as Exclude<ItemType, 'gem'>];
       const currentEquipped = activeCharacter.equipment[slot];
 
       if (currentEquipped) {

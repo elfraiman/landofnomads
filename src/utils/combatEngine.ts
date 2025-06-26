@@ -1,4 +1,4 @@
-import { Character, CombatResult, CombatRound, CombatStats, CombatAction, CharacterStats } from '../types';
+import { Character, CombatResult, CombatRound, CombatStats, CombatAction, CharacterStats, ActiveGemEffect } from '../types';
 
 // Combat weapon attack information
 interface WeaponAttack {
@@ -98,17 +98,35 @@ const applyDiminishingReturns = (statValue: number): number => {
   return baseStat + Math.sqrt(excessStat * 5);
 };
 
+// Apply active gem effects to character stats
+const applyGemEffects = (baseStats: CharacterStats, activeGemEffects: ActiveGemEffect[]): CharacterStats => {
+  let modifiedStats = { ...baseStats };
+  
+  activeGemEffects.forEach(effect => {
+    Object.entries(effect.statBonus).forEach(([stat, bonus]) => {
+      if (typeof bonus === 'number') {
+        modifiedStats[stat as keyof CharacterStats] += bonus;
+      }
+    });
+  });
+  
+  return modifiedStats;
+};
+
 // Calculate effective combat stats from character stats and equipment
 export const calculateCombatStats = (character: Character): CombatStats => {
   const { stats, equipment, level } = character;
 
-  // Base stats from character with diminishing returns applied
+  // Apply gem effects to base stats first, then diminishing returns
+  const gemModifiedStats = applyGemEffects(stats, character.activeGemEffects || []);
+  
+  // Base stats from character with gem effects and diminishing returns applied
   let effectiveStats = {
-    strength: applyDiminishingReturns(stats.strength),
-    dexterity: applyDiminishingReturns(stats.dexterity),
-    constitution: applyDiminishingReturns(stats.constitution),
-    intelligence: applyDiminishingReturns(stats.intelligence),
-    speed: applyDiminishingReturns(stats.speed)
+    strength: applyDiminishingReturns(gemModifiedStats.strength),
+    dexterity: applyDiminishingReturns(gemModifiedStats.dexterity),
+    constitution: applyDiminishingReturns(gemModifiedStats.constitution),
+    intelligence: applyDiminishingReturns(gemModifiedStats.intelligence),
+    speed: applyDiminishingReturns(gemModifiedStats.speed)
   };
   
   let armor = 0;
@@ -671,6 +689,7 @@ export const generateAIOpponent = (playerLevel: number): Character => {
     wins: Math.floor(Math.random() * level * 5),
     losses: Math.floor(Math.random() * level * 3),
     lastTraining: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, speed: 0 },
+    activeGemEffects: [], // AI characters start with no gem effects
     createdAt: Date.now(),
     lastActive: Date.now()
   };
@@ -704,6 +723,55 @@ export const getCombatStatsDisplay = (character: Character) => {
     speed: `${stats.speed}`,
     combatStyle: combatStyleText
   };
+};
+
+// Consume a gem and apply its effects to the character
+export const consumeGem = (character: Character, gem: any): Character => {
+  if (gem.type !== 'gem') {
+    throw new Error('Item is not a gem');
+  }
+
+  const newGemEffect: ActiveGemEffect = {
+    gemName: gem.name,
+    gemType: gem.gemType,
+    gemTier: gem.gemTier,
+    statBonus: gem.consumeEffect.statBonus,
+    battlesRemaining: gem.consumeEffect.duration,
+    description: gem.consumeEffect.description,
+    appliedAt: Date.now()
+  };
+
+  return {
+    ...character,
+    activeGemEffects: [...(character.activeGemEffects || []), newGemEffect],
+    inventory: character.inventory.filter(item => item.id !== gem.id)
+  };
+};
+
+// Reduce gem effect durations after combat
+export const updateGemEffectsAfterCombat = (character: Character): Character => {
+  const updatedEffects = (character.activeGemEffects || [])
+    .map(effect => ({
+      ...effect,
+      battlesRemaining: effect.battlesRemaining - 1
+    }))
+    .filter(effect => effect.battlesRemaining > 0);
+
+  return {
+    ...character,
+    activeGemEffects: updatedEffects
+  };
+};
+
+// Get active gem effects summary for display
+export const getActiveGemEffectsSummary = (character: Character): string[] => {
+  if (!character.activeGemEffects || character.activeGemEffects.length === 0) {
+    return [];
+  }
+
+  return character.activeGemEffects.map(effect => 
+    `${effect.gemName}: ${effect.description} (${effect.battlesRemaining} battles left)`
+  );
 };
 
 // NEW: Calculate equipment bonuses breakdown for visual display

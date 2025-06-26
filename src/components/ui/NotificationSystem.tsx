@@ -6,7 +6,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export interface Notification {
   id: string;
-  type: 'item_drop' | 'level_up' | 'achievement' | 'warning' | 'success' | 'info' | 'death';
+  type: 'item_drop' | 'gem_drop' | 'level_up' | 'achievement' | 'warning' | 'success' | 'info' | 'death';
   title: string;
   message: string;
   duration?: number; // in milliseconds, default 4000
@@ -85,6 +85,17 @@ const NotificationItem: React.FC<{
           borderLeftColor: getRarityColor(notification.itemDetails?.rarity || 'common'),
           borderLeftWidth: 4,
         };
+      case 'gem_drop':
+        return {
+          backgroundColor: Colors.surface,
+          borderLeftColor: Colors.accent,
+          borderLeftWidth: 4,
+          shadowColor: Colors.accent,
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 8,
+        };
       case 'level_up':
         return {
           backgroundColor: Colors.surface,
@@ -139,6 +150,7 @@ const NotificationItem: React.FC<{
   const getNotificationIcon = () => {
     switch (notification.type) {
       case 'item_drop': return '!';
+      case 'gem_drop': return '💎';
       case 'level_up': return '+';
       case 'achievement': return '*';
       case 'success': return '✓';

@@ -181,6 +181,24 @@ export const ColorUtils = {
     }
   },
 
+  // Get gem type color for visual distinction
+  getGemTypeColor: (gemType: string): string => {
+    switch (gemType.toLowerCase()) {
+      case 'ruby':
+        return '#DC2626'; // Red for Strength
+      case 'sapphire':
+        return '#2563EB'; // Blue for Constitution  
+      case 'emerald':
+        return '#059669'; // Green for Intelligence
+      case 'diamond':
+        return '#E5E7EB'; // White/Silver for Dexterity
+      case 'opal':
+        return '#A855F7'; // Purple for Speed
+      default:
+        return Colors.primary;
+    }
+  },
+
   // Parse combat text for player vs enemy coloring with damage number highlighting
   parseCombatText: (text: string, playerName: string): Array<{ text: string, color: string, bold?: boolean }> => {
     const parts: Array<{ text: string, color: string, bold?: boolean }> = [];
