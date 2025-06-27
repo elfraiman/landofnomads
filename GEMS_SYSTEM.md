@@ -138,3 +138,110 @@ Players must choose between:
 ## Conclusion
 
 The Gem System adds a compelling layer of progression and decision-making to Land of Nomads. By ensuring every gem drop remains valuable through the fusion system, players always have reasons to engage with monster hunting and strategic resource management. The system scales elegantly from early game excitement to late game optimization, providing lasting engagement throughout the player's journey. 
+
+## Gem Types
+
+### Stat Bonus Gems
+- **Ruby** (Strength) - Red (#DC2626)
+- **Sapphire** (Constitution) - Blue (#2563EB)
+- **Emerald** (Intelligence) - Green (#059669)
+- **Diamond** (Dexterity) - White/Silver (#E5E7EB)
+- **Opal** (Speed) - Pink (#FCB8E6FF)
+
+### Special Bonus Gems
+- **Amethyst** (Experience Bonus) - Purple (#A855F7)
+- **Amber** (Gold Bonus) - Orange (#D97706)
+
+## Gem Tiers
+- **Flawed** (Common) - 0.5x multiplier, 20 battles duration
+- **Normal** (Uncommon) - 1.0x multiplier, 45 battles duration
+- **Greater** (Rare) - 2.0x multiplier, 85 battles duration
+- **Perfect** (Epic) - 4.0x multiplier, 180 battles duration
+- **Legendary** (Legendary) - 8.0x multiplier, 300 battles duration
+
+## Drop System
+
+### Configurable Drop Chances
+Each gem type has configurable drop chances defined in `src/data/gems.ts`:
+
+```typescript
+dropChance: {
+  base: number;              // Base drop chance (0.0-1.0)
+  rarityMultiplier: number;  // Multiplier for rare monsters
+}
+```
+
+### Current Drop Rates
+- **Ruby/Sapphire/Emerald**: 8% base, 1.5x rare multiplier
+- **Diamond**: 6% base, 1.8x rare multiplier
+- **Opal**: 5% base, 2.0x rare multiplier
+- **Amethyst**: 2% base, 3.0x rare multiplier (very rare)
+- **Amber**: 2.5% base, 2.5x rare multiplier (very rare)
+
+### Tier Drop Modifiers
+- **Flawed**: 100% of base chance
+- **Normal**: 60% of base chance
+- **Greater**: 30% of base chance
+- **Perfect**: 10% of base chance
+- **Legendary**: 2% of base chance
+
+### Monster Rarity Multipliers
+- **Common**: 1.0x
+- **Uncommon**: 1.2x
+- **Rare**: Uses gem's rarityMultiplier
+- **Elite**: rarityMultiplier × 1.5
+- **Boss**: rarityMultiplier × 2.0
+
+### Level Requirements
+Gems only drop from monsters of appropriate level:
+- **Flawed**: Level 1+
+- **Normal**: Level 5+
+- **Greater**: Level 15+
+- **Perfect**: Level 30+
+- **Legendary**: Level 50+
+
+## Fusion System
+- **2 Flawed** → 1 Normal
+- **2 Normal** → 1 Greater
+- **2 Greater** → 1 Perfect
+- **4 Perfect** → 1 Legendary
+
+## Bonus Effects
+
+### Experience Bonus (Amethyst)
+- Increases all experience gained from combat
+- Stacks additively with multiple gems
+- Applies to both base rewards and bonus loot
+
+### Gold Bonus (Amber)
+- Increases all gold gained from combat
+- Stacks additively with multiple gems
+- Applies to both base rewards and bonus loot
+
+## Functions
+
+### Drop Chance Calculation
+```typescript
+calculateGemDropChance(gemType, gemTier, monsterRarity): number
+```
+
+### Gem Generation
+```typescript
+generateGemDrop(monsterLevel, monsterRarity): Gem | null
+```
+
+### Drop Information
+```typescript
+getGemDropInfo(monsterLevel, monsterRarity): {
+  totalChance: number;
+  topDrops: Array<{name, tier, chance, color}>;
+}
+```
+
+## Customization
+To modify drop rates:
+1. Edit `gemBaseData[gemType].dropChance.base` for base rates
+2. Edit `gemBaseData[gemType].dropChance.rarityMultiplier` for rare monster bonuses
+3. Edit `gemTierData[tier].dropChanceModifier` for tier-specific modifiers
+
+The system automatically recalculates all drop chances when these values are changed. 

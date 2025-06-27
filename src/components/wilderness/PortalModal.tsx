@@ -59,14 +59,14 @@ export const PortalModal: React.FC<PortalModalProps> = ({
   };
 
   const getMapEmoji = (mapId: string): string => {
-    const emojiMap: Record<string, string> = {
-      'greenwood_valley': '🌲',
-      'shadowmere_swamps': '🐊',
-      'crystal_caverns': '💎',
-      'volcanic_peaks': '🌋',
-      'frozen_wastes': '❄️'
+    const mapIcons: Record<string, string> = {
+      'greenwood_valley': 'GV',
+      'shadowmere_swamps': 'SS',
+      'crystal_caverns': 'CC',
+      'volcanic_peaks': 'VP',
+      'frozen_wastes': 'FW'
     };
-    return emojiMap[mapId] || '🗺️';
+    return mapIcons[mapId] || 'M';
   };
 
   const getMapStyle = (map: MapConfig) => {

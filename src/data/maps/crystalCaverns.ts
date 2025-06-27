@@ -12,14 +12,14 @@ const calculateEnemyHealth = (level: number, rarity: 'common' | 'uncommon' | 'ra
   const baseHealth = 15;
   const levelMultiplier = 3; // Balanced multiplier
   let rarityModifier = 1;
-  
+
   switch (rarity) {
     case 'common': rarityModifier = 1; break;
     case 'uncommon': rarityModifier = 1.2; break;
     case 'rare': rarityModifier = 1.5; break;
     case 'elite': rarityModifier = 2; break;
   }
-  
+
   return Math.floor((baseHealth + (level * levelMultiplier)) * rarityModifier);
 };
 
@@ -42,7 +42,6 @@ export const crystalCavernsMonsters: WildernessMonster[] = [
   {
     id: 'crystal_bat',
     name: 'Crystal Bat',
-    emoji: '',
     level: 41,
     baseStats: {
       health: calculateEnemyHealth(41, 'common'), // 215 HP
@@ -61,7 +60,6 @@ export const crystalCavernsMonsters: WildernessMonster[] = [
   {
     id: 'crystal_mite',
     name: 'Crystal Mite',
-    emoji: '',
     level: 42,
     baseStats: {
       health: calculateEnemyHealth(42, 'common'), // 220 HP
@@ -80,7 +78,6 @@ export const crystalCavernsMonsters: WildernessMonster[] = [
   {
     id: 'stone_golem',
     name: 'Stone Golem',
-    emoji: '',
     level: 43,
     baseStats: {
       health: calculateEnemyHealth(43, 'uncommon'), // 271 HP (225 * 1.2)
@@ -99,7 +96,6 @@ export const crystalCavernsMonsters: WildernessMonster[] = [
   {
     id: 'crystal_spider',
     name: 'Crystal Spider',
-    emoji: '',
     level: 44,
     baseStats: {
       health: calculateEnemyHealth(44, 'uncommon'), // 276 HP (230 * 1.2)
@@ -118,7 +114,6 @@ export const crystalCavernsMonsters: WildernessMonster[] = [
   {
     id: 'cave_troll',
     name: 'Cave Troll',
-    emoji: '',
     level: 45,
     baseStats: {
       health: calculateEnemyHealth(45, 'rare'), // 368 HP (235 * 1.5)
@@ -137,7 +132,6 @@ export const crystalCavernsMonsters: WildernessMonster[] = [
   {
     id: 'crystal_elemental',
     name: 'Crystal Elemental',
-    emoji: '',
     level: 46,
     baseStats: {
       health: calculateEnemyHealth(46, 'rare'), // 375 HP (240 * 1.5)
@@ -156,7 +150,6 @@ export const crystalCavernsMonsters: WildernessMonster[] = [
   {
     id: 'shadow_wraith',
     name: 'Shadow Wraith',
-    emoji: '',
     level: 47,
     baseStats: {
       health: calculateEnemyHealth(47, 'rare'), // 383 HP (245 * 1.5)
@@ -175,7 +168,6 @@ export const crystalCavernsMonsters: WildernessMonster[] = [
   {
     id: 'gem_golem',
     name: 'Gem Golem',
-    emoji: '',
     level: 48,
     baseStats: {
       health: calculateEnemyHealth(48, 'rare'), // 390 HP (250 * 1.5)
@@ -194,7 +186,6 @@ export const crystalCavernsMonsters: WildernessMonster[] = [
   {
     id: 'crystal_dragon',
     name: 'Crystal Dragon',
-    emoji: '',
     level: 50,
     baseStats: {
       health: calculateEnemyHealth(50, 'elite'), // 520 HP (260 * 2)

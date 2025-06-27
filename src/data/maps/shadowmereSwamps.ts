@@ -12,14 +12,14 @@ const calculateEnemyHealth = (level: number, rarity: 'common' | 'uncommon' | 'ra
   const baseHealth = 15;
   const levelMultiplier = 3; // Balanced multiplier
   let rarityModifier = 1;
-  
+
   switch (rarity) {
     case 'common': rarityModifier = 1; break;
     case 'uncommon': rarityModifier = 1.2; break;
     case 'rare': rarityModifier = 1.5; break;
     case 'elite': rarityModifier = 2; break;
   }
-  
+
   return Math.floor((baseHealth + (level * levelMultiplier)) * rarityModifier);
 };
 
@@ -42,7 +42,6 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
   {
     id: 'swamp_rat',
     name: 'Swamp Rat',
-    emoji: '',
     level: 16,
     baseStats: {
       health: calculateEnemyHealth(16, 'common'), // 58 HP
@@ -61,7 +60,6 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
   {
     id: 'bog_troll',
     name: 'Bog Troll',
-    emoji: '',
     level: 17,
     baseStats: {
       health: calculateEnemyHealth(17, 'common'), // 61 HP
@@ -80,7 +78,6 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
   {
     id: 'poison_spider',
     name: 'Poison Spider',
-    emoji: '',
     level: 18,
     baseStats: {
       health: calculateEnemyHealth(18, 'uncommon'), // 77 HP (64 * 1.2)
@@ -99,7 +96,6 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
   {
     id: 'marsh_wraith',
     name: 'Marsh Wraith',
-    emoji: '',
     level: 19,
     baseStats: {
       health: calculateEnemyHealth(19, 'uncommon'), // 80 HP (67 * 1.2)
@@ -118,7 +114,6 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
   {
     id: 'swamp_dragon',
     name: 'Swamp Dragon',
-    emoji: '',
     level: 20,
     baseStats: {
       health: calculateEnemyHealth(20, 'rare'), // 105 HP (70 * 1.5)
@@ -137,7 +132,6 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
   {
     id: 'ancient_treant',
     name: 'Ancient Treant',
-    emoji: '',
     level: 21,
     baseStats: {
       health: calculateEnemyHealth(21, 'rare'), // 109 HP (73 * 1.5)
@@ -156,7 +150,6 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
   {
     id: 'shadow_beast',
     name: 'Shadow Beast',
-    emoji: '',
     level: 22,
     baseStats: {
       health: calculateEnemyHealth(22, 'rare'), // 112 HP (76 * 1.5)
@@ -175,7 +168,6 @@ export const shadowmereSwampsMonsters: WildernessMonster[] = [
   {
     id: 'bog_king',
     name: 'Bog King',
-    emoji: '',
     level: 25,
     baseStats: {
       health: calculateEnemyHealth(25, 'elite'), // 170 HP (85 * 2)

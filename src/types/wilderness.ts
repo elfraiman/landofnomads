@@ -34,7 +34,6 @@ export interface WildernessMap {
 export interface WildernessMonster {
   id: string;
   name: string;
-  emoji: string;
   level: number;
   baseStats: {
     health: number;

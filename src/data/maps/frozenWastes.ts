@@ -7,14 +7,14 @@ const calculateEnemyHealth = (level: number, rarity: 'common' | 'uncommon' | 'ra
   const baseHealth = 15;
   const levelMultiplier = 3; // Balanced multiplier
   let rarityModifier = 1;
-  
+
   switch (rarity) {
     case 'common': rarityModifier = 1; break;
     case 'uncommon': rarityModifier = 1.2; break;
     case 'rare': rarityModifier = 1.5; break;
     case 'elite': rarityModifier = 2; break;
   }
-  
+
   return Math.floor((baseHealth + (level * levelMultiplier)) * rarityModifier);
 };
 
@@ -37,7 +37,6 @@ export const frozenWastesMonsters: WildernessMonster[] = [
   {
     id: 'ice_wolf',
     name: 'Ice Wolf',
-    emoji: '',
     level: 9,
     baseStats: {
       health: calculateEnemyHealth(9, 'common'), // 37 HP
@@ -56,7 +55,6 @@ export const frozenWastesMonsters: WildernessMonster[] = [
   {
     id: 'frost_goblin',
     name: 'Frost Goblin',
-    emoji: '',
     level: 10,
     baseStats: {
       health: calculateEnemyHealth(10, 'common'), // 40 HP
@@ -75,7 +73,6 @@ export const frozenWastesMonsters: WildernessMonster[] = [
   {
     id: 'snow_leopard',
     name: 'Snow Leopard',
-    emoji: '',
     level: 11,
     baseStats: {
       health: calculateEnemyHealth(11, 'uncommon'), // 50 HP (43 * 1.2)
@@ -94,7 +91,6 @@ export const frozenWastesMonsters: WildernessMonster[] = [
   {
     id: 'ice_elemental',
     name: 'Ice Elemental',
-    emoji: '',
     level: 12,
     baseStats: {
       health: calculateEnemyHealth(12, 'uncommon'), // 53 HP (46 * 1.2)
@@ -113,7 +109,6 @@ export const frozenWastesMonsters: WildernessMonster[] = [
   {
     id: 'yeti',
     name: 'Yeti',
-    emoji: '',
     level: 13,
     baseStats: {
       health: calculateEnemyHealth(13, 'rare'), // 73 HP (49 * 1.5)
@@ -132,7 +127,6 @@ export const frozenWastesMonsters: WildernessMonster[] = [
   {
     id: 'frost_giant',
     name: 'Frost Giant',
-    emoji: '',
     level: 14,
     baseStats: {
       health: calculateEnemyHealth(14, 'rare'), // 78 HP (52 * 1.5)
@@ -151,7 +145,6 @@ export const frozenWastesMonsters: WildernessMonster[] = [
   {
     id: 'ice_dragon',
     name: 'Ice Dragon',
-    emoji: '',
     level: 15,
     baseStats: {
       health: calculateEnemyHealth(15, 'elite'), // 110 HP (55 * 2)

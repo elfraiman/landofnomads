@@ -401,8 +401,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     const character = gameState.currentCharacter;
-    console.log('Equipping item:', item.name, 'to character:', character.name);
-    console.log('Character inventory before:', character.inventory?.length || 0, 'items');
+    console.log(`Equipping item: ${item.name} to character: ${character.name}`);
+    console.log(`Inventory - Character inventory before: ${character.inventory?.length || 0} items`);
 
     let targetSlot: keyof Character['equipment'];
     let currentEquipped: Item | undefined;
@@ -474,7 +474,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       currentEquipped = character.equipment[targetSlot];
     }
 
-    console.log('Target slot:', targetSlot, 'Currently equipped:', currentEquipped?.name || 'none');
+    console.log(`Equipment - Target slot: ${targetSlot} Currently equipped: ${currentEquipped?.name || 'none'}`);
 
     const updatedCharacter = {
       ...character,
@@ -490,7 +490,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ]
     };
 
-    console.log('Updated character inventory after:', updatedCharacter.inventory.length, 'items');
+    console.log(`Inventory - Updated inventory size: ${updatedCharacter.inventory.length}`);
 
     setGameState(prev => ({
       ...prev,
@@ -578,14 +578,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     const character = gameState.currentCharacter;
-    console.log(`📦 Adding ${item.name} to ${character.name}'s inventory (current inventory size: ${character.inventory.length})`);
-    
+    console.log(`Inventory - Adding ${item.name} to ${character.name}'s inventory (current inventory size: ${character.inventory.length})`);
+
     const updatedCharacter = {
       ...character,
       inventory: [...character.inventory, item]
     };
 
-    console.log(`📦 Updated inventory size: ${updatedCharacter.inventory.length}`);
+    console.log(`Inventory - Updated inventory size: ${updatedCharacter.inventory.length}`);
 
     setGameState(prev => ({
       ...prev,
@@ -597,7 +597,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Save the game after adding item to inventory
     setTimeout(() => {
-      console.log('💾 Saving game after item addition...');
+      console.log('Storage - Saving game after item addition...');
       saveGame();
     }, 100);
   };
@@ -652,7 +652,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!gameState.currentCharacter) return false;
 
     const character = gameState.currentCharacter;
-    
+
     // Check if player has enough gold
     if (character.gold < item.price) {
       return false;
@@ -933,6 +933,30 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return monsters[0]; // Fallback
   };
 
+  // Helper function to calculate gem bonuses
+  const calculateGemBonuses = (character: Character): { experienceBonus: number; goldBonus: number } => {
+    let totalExperienceBonus = 0;
+    let totalGoldBonus = 0;
+
+    console.log('Gem Bonuses - Calculating for character:', character.name);
+    console.log('Gem Bonuses - Active gem effects count:', character.activeGemEffects.length);
+
+    character.activeGemEffects.forEach(effect => {
+      console.log('Gem Bonuses - Processing gem effect:', effect.gemName, effect);
+      if (effect.experienceBonus) {
+        totalExperienceBonus += effect.experienceBonus;
+        console.log('Gem Bonuses - Added experience bonus:', effect.experienceBonus, 'Total now:', totalExperienceBonus);
+      }
+      if (effect.goldBonus) {
+        totalGoldBonus += effect.goldBonus;
+        console.log('Gem Bonuses - Added gold bonus:', effect.goldBonus, 'Total now:', totalGoldBonus);
+      }
+    });
+
+    console.log('Gem Bonuses - Final bonuses - Experience:', totalExperienceBonus, '%, Gold:', totalGoldBonus, '%');
+    return { experienceBonus: totalExperienceBonus, goldBonus: totalGoldBonus };
+  };
+
   // Generate loot from monster's loot table with guaranteed base rewards
   const generateLoot = (monster: WildernessMonster, playerLevel: number): { gold: number; experience: number; items: Item[] } => {
     let totalGold = 0;
@@ -961,21 +985,60 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const levelDiff = monster.level - playerLevel;
     const levelMultiplier = Math.max(0.3, 1 + (levelDiff * 0.2));
 
-    // Calculate final guaranteed rewards
-    totalExperience = Math.floor(baseXP * rarityMultiplier * levelMultiplier);
-    totalGold = Math.floor(baseGold * rarityMultiplier * levelMultiplier);
+    // Calculate base rewards
+    let finalExperience = Math.floor(baseXP * rarityMultiplier * levelMultiplier);
+    let finalGold = Math.floor(baseGold * rarityMultiplier * levelMultiplier);
+
+    // Apply gem bonuses if character is available
+    if (gameState.currentCharacter) {
+      const gemBonuses = calculateGemBonuses(gameState.currentCharacter);
+
+      console.log('Loot Generation - Gem bonuses calculated:', gemBonuses);
+      console.log('Loot Generation - Base rewards before bonuses - XP:', finalExperience, 'Gold:', finalGold);
+
+      if (gemBonuses.experienceBonus > 0) {
+        const bonusXP = Math.floor(finalExperience * (gemBonuses.experienceBonus / 100));
+        finalExperience += bonusXP;
+        console.log('Loot Generation - Experience bonus applied:', bonusXP, 'New total:', finalExperience);
+      }
+
+      if (gemBonuses.goldBonus > 0) {
+        const bonusGold = Math.floor(finalGold * (gemBonuses.goldBonus / 100));
+        finalGold += bonusGold;
+        console.log('Loot Generation - Gold bonus applied:', bonusGold, 'New total:', finalGold);
+      }
+    }
+
+    totalExperience = finalExperience;
+    totalGold = finalGold;
 
     // BONUS REWARDS from loot table (in addition to guaranteed rewards)
     monster.lootTable.forEach(drop => {
       if (Math.random() <= drop.chance) {
         // Add bonus gold
         if (drop.gold) {
-          totalGold += drop.gold;
+          let bonusGold = drop.gold;
+          // Apply gem bonus to bonus gold as well
+          if (gameState.currentCharacter) {
+            const gemBonuses = calculateGemBonuses(gameState.currentCharacter);
+            if (gemBonuses.goldBonus > 0) {
+              bonusGold += Math.floor(drop.gold * (gemBonuses.goldBonus / 100));
+            }
+          }
+          totalGold += bonusGold;
         }
 
         // Add bonus experience
         if (drop.experience) {
-          totalExperience += drop.experience;
+          let bonusXP = drop.experience;
+          // Apply gem bonus to bonus experience as well
+          if (gameState.currentCharacter) {
+            const gemBonuses = calculateGemBonuses(gameState.currentCharacter);
+            if (gemBonuses.experienceBonus > 0) {
+              bonusXP += Math.floor(drop.experience * (gemBonuses.experienceBonus / 100));
+            }
+          }
+          totalExperience += bonusXP;
         }
 
         // Add items (both new system and legacy support)
@@ -998,13 +1061,24 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     });
 
-    // RARE GEM DROPS (5% base chance, higher for rare monsters)
-    const gemDropChance = 0.05 + (rarityMultiplier - 1) * 0.02; // 5% base, up to 9% for boss
-    if (Math.random() <= gemDropChance) {
-      // Import gem generation function
-      const { generateRandomGem } = require('../data/gems');
-      const gem = generateRandomGem(monster.level);
-      droppedItems.push(gem);
+    // RARE GEM DROPS using configurable drop chances
+    const { generateGemDrop } = require('../data/gems');
+    const droppedGem = generateGemDrop(monster.level, monster.rarity);
+
+    if (droppedGem) {
+      droppedItems.push(droppedGem);
+
+      // Add gem drop notification
+      addNotification({
+        type: 'gem_drop',
+        title: 'Gem Found!',
+        message: `Found a ${droppedGem.name} from the defeated monster!`,
+        duration: 3000,
+        gemDetails: {
+          name: droppedGem.name,
+          gemType: droppedGem.gemType
+        }
+      });
     }
 
     return { gold: totalGold, experience: totalExperience, items: droppedItems };
@@ -1183,16 +1257,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const lootResult = generateLoot(spawnedMonster.monster, character.level);
 
         // Add actual items to inventory (not string IDs)
-        console.log(`🎁 Loot generated: ${lootResult.items.length} items`, lootResult.items.map(i => `${i.name} (${i.type})`));
-        
+        console.log(`Loot - Generated: ${lootResult.items.length} items`, lootResult.items.map(i => `${i.name} (${i.type})`));
+
         lootResult.items.forEach(item => {
-          console.log(`📦 Adding item to inventory: ${item.name} (${item.type}, ID: ${item.id})`);
+          console.log(`Inventory - Adding item to inventory: ${item.name} (${item.type}, ID: ${item.id})`);
           addItemToInventory(item);
 
           // Show special notification for gem drops
           if (item.type === 'gem') {
             const gem = item as any; // Gem type
-            console.log(`💎 Gem dropped: ${gem.name} (${gem.gemType}, ${gem.gemTier})`);
+            console.log(`Gem Drop - Gem dropped: ${gem.name} (${gem.gemType}, ${gem.gemTier})`);
             addNotification({
               type: 'gem_drop',
               title: '💎 Rare Gem Found!',
@@ -1200,7 +1274,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               duration: 5000
             });
           } else {
-            console.log(`🎁 Regular item dropped: ${item.name} (${item.type})`);
+            console.log(`Item Drop - Regular item dropped: ${item.name} (${item.type})`);
             // Show notification for regular item drop
             addNotification({
               type: 'item_drop',
@@ -1227,7 +1301,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         monstersKilled.push({
           name: spawnedMonster.monster.name,
           level: spawnedMonster.monster.level,
-          emoji: spawnedMonster.monster.emoji,
           experience: rewards.experience,
           gold: rewards.gold
         });
@@ -1251,7 +1324,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         updateCharacter(updatedCharacter);
         removeDeadMonster(spawnedMonsterId);
-        
+
         // Save the game after successful combat
         setTimeout(() => saveGame(), 200);
       } else {
@@ -1271,7 +1344,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         updateCharacter(updatedCharacter);
-        
+
         // Save the game after defeat
         setTimeout(() => saveGame(), 200);
       }
@@ -1642,20 +1715,56 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    console.log('🧪 Creating test item...');
+    console.log('Test - Creating test item...');
     const testItem = generateItem(baseItems[0], 5); // Generate a level 5 iron sword
-    console.log('🧪 Test item created:', testItem.name, testItem.id);
-    
+    console.log('Test - Test item created:', testItem.name, testItem.id);
+
     addItemToInventory(testItem);
-    console.log('🧪 Test item added to inventory');
-    
-    // Also test gem generation
-    const { generateRandomGem } = require('../data/gems');
-    const testGem = generateRandomGem(5);
-    console.log('🧪 Test gem created:', testGem.name, testGem.id);
-    
-    addItemToInventory(testGem);
-    console.log('🧪 Test gem added to inventory');
+    console.log('Test - Test item added to inventory');
+
+    // Test new gem drop system
+    const { createGem, generateGemDrop, getGemDropInfo } = require('../data/gems');
+
+    // Add some new gem types for testing
+    const citrineGem = createGem('citrine', 'normal', 5);
+    const amberGem = createGem('amber', 'greater', 5);
+    const rubyGem = createGem('ruby', 'perfect', 5);
+
+    console.log('Test - Test gems created:', citrineGem.name, amberGem.name, rubyGem.name);
+
+    addItemToInventory(citrineGem);
+    addItemToInventory(amberGem);
+    addItemToInventory(rubyGem);
+
+    // Test the new drop system
+    console.log('Test - Testing gem drop system...');
+
+    // Test different monster rarities
+    const testMonsters = [
+      { level: 10, rarity: 'common' as const },
+      { level: 20, rarity: 'rare' as const },
+      { level: 35, rarity: 'elite' as const }
+    ];
+
+    testMonsters.forEach(monster => {
+      const dropInfo = getGemDropInfo(monster.level, monster.rarity);
+      console.log(`Test - Level ${monster.level} ${monster.rarity} monster:`);
+      console.log(`   Total gem drop chance: ${(dropInfo.totalChance * 100).toFixed(1)}%`);
+      console.log(`   Top drops:`, dropInfo.topDrops.map((d: { tier: string; name: string; chance: number }) =>
+        `${d.tier} ${d.name} (${(d.chance * 100).toFixed(2)}%)`
+      ).join(', '));
+
+      // Generate a test drop
+      const testDrop = generateGemDrop(monster.level, monster.rarity);
+      if (testDrop) {
+        console.log(`   Test drop: ${testDrop.name}`);
+        addItemToInventory(testDrop);
+      } else {
+        console.log(`   No gem dropped`);
+      }
+    });
+
+    console.log('Test - Test gems and drops added to inventory');
   };
 
   // Portal/Map system functions
@@ -1741,22 +1850,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const character = gameState.currentCharacter;
     const gem = character.inventory.find(item => item.id === gemId && item.type === 'gem');
-    
+
     if (!gem) return false;
 
     try {
       const { consumeGem: consumeGemUtil } = require('../utils/combatEngine');
       const updatedCharacter = consumeGemUtil(character, gem);
-      
+
       updateCharacter(updatedCharacter);
-      
+
       addNotification({
-        type: 'success',
-        title: 'Gem Consumed!',
-        message: `${gem.name} consumed. ${(gem as any).consumeEffect?.description || 'Effect applied!'}`,
-        duration: 3000
+        type: 'gem_drop',
+        title: 'Gem Broken!',
+        message: `${gem.name} broken, releasing its power. ${(gem as any).consumeEffect?.description || 'Effect applied!'}`,
+        duration: 3000,
+        gemDetails: {
+          name: gem.name,
+          gemType: (gem as any).gemType
+        }
       });
-      
+
       return true;
     } catch (error) {
       console.error('Failed to consume gem:', error);
@@ -1769,13 +1882,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const character = gameState.currentCharacter;
     const gems = gemIds.map(id => character.inventory.find(item => item.id === id && item.type === 'gem')).filter(Boolean) as any[];
-    
+
     if (gems.length < 2) return false;
 
     try {
       const { fuseGems: fuseGemsUtil } = require('../data/gems');
       const fusedGem = fuseGemsUtil(gems);
-      
+
       if (!fusedGem) return false;
 
       // Remove consumed gems and add fused gem
@@ -1786,16 +1899,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           fusedGem
         ]
       };
-      
+
       updateCharacter(updatedCharacter);
-      
+
       addNotification({
-        type: 'success',
+        type: 'gem_drop',
         title: 'Gems Fused!',
         message: `${gems.length} ${gems[0].name}s fused into ${fusedGem.name}!`,
-        duration: 3000
+        duration: 3000,
+        gemDetails: {
+          name: fusedGem.name,
+          gemType: fusedGem.gemType
+        }
       });
-      
+
       return true;
     } catch (error) {
       console.error('Failed to fuse gems:', error);
@@ -1854,10 +1971,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     notifications,
     addNotification,
     dismissNotification,
-          saveGame,
-      loadGame,
-      debugSaveData,
-      addTestItem,
+    saveGame,
+    loadGame,
+    debugSaveData,
+    addTestItem,
     getExperienceForLevel,
     getExperiencePercentage,
     getExperienceToNextLevel,

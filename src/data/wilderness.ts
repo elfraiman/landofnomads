@@ -122,21 +122,21 @@ export const canAccessMap = (mapId: string, playerLevel: number, defeatedBosses:
   return meetsLevelReq && meetsBossReq;
 };
 
-// Helper function to get tile emoji
+// Helper function to get tile text representation
 export const getTileEmoji = (type: TileType): string => {
-  const emojiMap: Record<TileType, string> = {
-    grass: '🌱',
-    forest: '🌲',
-    mountain: '⛰️',
-    water: '🌊',
-    cave: '🕳️',
-    ruins: '🏛️',
-    village: '🏘️',
-    road: '��️',
-    portal: '🌀',
-    merchant: '🏪'
+  const tileMap: Record<TileType, string> = {
+    grass: 'G',
+    forest: 'F',
+    mountain: 'M',
+    water: 'W',
+    cave: 'C',
+    ruins: 'R',
+    village: 'V',
+    road: 'P',
+    portal: 'O',
+    merchant: 'S'
   };
-  return emojiMap[type] || '❓';
+  return tileMap[type] || '?';
 };
 
 // Helper function to calculate monster level based on distance from start and player level

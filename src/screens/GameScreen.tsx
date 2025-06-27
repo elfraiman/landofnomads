@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Dimensions } from 'react-native';
 import { useGame } from '../context/GameContext';
 import { Colors, ColorUtils, RPGTextStyles } from '../utils/colors';
 import CharacterStatsTab from '../components/character/CharacterStatsTab';
@@ -13,7 +13,15 @@ import { WildernessTab } from '../components/wilderness/WildernessTab';
 import LevelUpModal from '../components/character/LevelUpModal';
 import { NotificationSystem } from '../components/ui/NotificationSystem';
 
+const { width } = Dimensions.get('window');
+
 type TabType = 'stats' | 'training' | 'combat' | 'equipment' | 'inventory' | 'gems' | 'wilderness';
+
+interface Tab {
+  id: TabType;
+  label: string;
+  emoji: string;
+}
 
 interface GameScreenProps {
   onLogout: () => void;
@@ -25,13 +33,13 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
   const { currentCharacter, checkLevelUp, performLevelUp, error, notifications, dismissNotification, saveGame, debugSaveData, addTestItem } = useGame();
 
   // Tab configuration for easy management
-  const tabs = [
+  const tabs: Tab[] = [
     { id: 'stats' as TabType, label: 'Stats', emoji: '' },
     { id: 'training' as TabType, label: 'Training', emoji: '' },
     { id: 'combat' as TabType, label: 'Combat', emoji: '' },
     { id: 'equipment' as TabType, label: 'Equipment', emoji: '' },
     { id: 'inventory' as TabType, label: 'Inventory', emoji: '' },
-    { id: 'gems' as TabType, label: 'Gems', emoji: '💎' },
+    { id: 'gems' as TabType, label: 'Gems', emoji: '' },
     { id: 'wilderness' as TabType, label: 'Wilderness', emoji: '' },
   ];
 
@@ -118,10 +126,10 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
           )}
         </View>
         <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            style={[styles.logoutButton, { backgroundColor: Colors.success, marginRight: 10 }]} 
+          <TouchableOpacity
+            style={[styles.logoutButton, { backgroundColor: Colors.success, marginRight: 10 }]}
             onPress={() => {
-              console.log('🧪 Test button pressed');
+              console.log('Test button pressed');
               addTestItem();
               debugSaveData();
             }}
@@ -144,7 +152,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
         >
           {tabs.map((tab) => {
             const gemCount = tab.id === 'gems' ? currentCharacter.inventory.filter(item => item.type === 'gem').length : 0;
-            
+
             return (
               <TouchableOpacity
                 key={tab.id}
@@ -210,7 +218,7 @@ const styles = StyleSheet.create({
   },
   characterInfo: {
     flex: 1,
- 
+
   },
   characterName: {
     ...RPGTextStyles.h2,

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions, Modal } from 'react-native';
 import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
+import { gemBaseData } from '../../data/gems';
+import { GemType } from '../../types';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -14,6 +16,10 @@ export interface Notification {
     name: string;
     level: number;
     rarity: string;
+  };
+  gemDetails?: {
+    name: string;
+    gemType: GemType;
   };
 }
 
@@ -88,9 +94,9 @@ const NotificationItem: React.FC<{
       case 'gem_drop':
         return {
           backgroundColor: Colors.surface,
-          borderLeftColor: Colors.accent,
+          borderLeftColor: notification.gemDetails ? gemBaseData[notification.gemDetails.gemType].color : Colors.accent,
           borderLeftWidth: 4,
-          shadowColor: Colors.accent,
+          shadowColor: notification.gemDetails ? gemBaseData[notification.gemDetails.gemType].color : Colors.accent,
           shadowOpacity: 0.3,
           shadowRadius: 8,
           shadowOffset: { width: 0, height: 2 },
@@ -150,7 +156,7 @@ const NotificationItem: React.FC<{
   const getNotificationIcon = () => {
     switch (notification.type) {
       case 'item_drop': return '!';
-      case 'gem_drop': return '💎';
+      case 'gem_drop': return 'G';
       case 'level_up': return '+';
       case 'achievement': return '*';
       case 'success': return '✓';

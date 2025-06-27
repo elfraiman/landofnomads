@@ -12,14 +12,14 @@ const calculateEnemyHealth = (level: number, rarity: 'common' | 'uncommon' | 'ra
   const baseHealth = 15;
   const levelMultiplier = 3; // Balanced multiplier
   let rarityModifier = 1;
-  
+
   switch (rarity) {
     case 'common': rarityModifier = 1; break;
     case 'uncommon': rarityModifier = 1.2; break;
     case 'rare': rarityModifier = 1.5; break;
     case 'elite': rarityModifier = 2; break;
   }
-  
+
   return Math.floor((baseHealth + (level * levelMultiplier)) * rarityModifier);
 };
 
@@ -42,7 +42,6 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
   {
     id: 'lava_lizard',
     name: 'Lava Lizard',
-    emoji: '',
     level: 26,
     baseStats: {
       health: calculateEnemyHealth(26, 'common'), // 114 HP
@@ -61,7 +60,6 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
   {
     id: 'fire_imp',
     name: 'Fire Imp',
-    emoji: '',
     level: 27,
     baseStats: {
       health: calculateEnemyHealth(27, 'common'), // 118 HP
@@ -80,7 +78,6 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
   {
     id: 'magma_golem',
     name: 'Magma Golem',
-    emoji: '',
     level: 28,
     baseStats: {
       health: calculateEnemyHealth(28, 'uncommon'), // 146 HP (122 * 1.2)
@@ -99,7 +96,6 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
   {
     id: 'flame_wraith',
     name: 'Flame Wraith',
-    emoji: '',
     level: 29,
     baseStats: {
       health: calculateEnemyHealth(29, 'uncommon'), // 150 HP (126 * 1.2)
@@ -118,7 +114,6 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
   {
     id: 'volcanic_drake',
     name: 'Volcanic Drake',
-    emoji: '',
     level: 30,
     baseStats: {
       health: calculateEnemyHealth(30, 'rare'), // 195 HP (130 * 1.5)
@@ -137,7 +132,6 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
   {
     id: 'phoenix',
     name: 'Phoenix',
-    emoji: '',
     level: 32,
     baseStats: {
       health: calculateEnemyHealth(32, 'rare'), // 207 HP (138 * 1.5)
@@ -156,7 +150,6 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
   {
     id: 'lava_titan',
     name: 'Lava Titan',
-    emoji: '',
     level: 35,
     baseStats: {
       health: calculateEnemyHealth(35, 'rare'), // 225 HP (150 * 1.5)
@@ -175,7 +168,6 @@ export const volcanicPeaksMonsters: WildernessMonster[] = [
   {
     id: 'inferno_dragon',
     name: 'Inferno Dragon',
-    emoji: '',
     level: 40,
     baseStats: {
       health: calculateEnemyHealth(40, 'elite'), // 340 HP (170 * 2)

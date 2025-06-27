@@ -12,14 +12,14 @@ const calculateEnemyHealth = (level: number, rarity: 'common' | 'uncommon' | 'ra
   const baseHealth = 15;
   const levelMultiplier = 3; // Balanced multiplier
   let rarityModifier = 1;
-  
+
   switch (rarity) {
     case 'common': rarityModifier = 1; break;
     case 'uncommon': rarityModifier = 1.2; break;
     case 'rare': rarityModifier = 1.5; break;
     case 'elite': rarityModifier = 2; break;
   }
-  
+
   return Math.floor((baseHealth + (level * levelMultiplier)) * rarityModifier);
 };
 
@@ -42,7 +42,6 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
   {
     id: 'forest_rabbit',
     name: 'Forest Rabbit',
-    emoji: '',
     level: 1,
     baseStats: {
       health: calculateEnemyHealth(1, 'common'), // 12 HP
@@ -60,7 +59,6 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
   {
     id: 'goblin_scout',
     name: 'Goblin Scout',
-    emoji: '',
     level: 2,
     baseStats: {
       health: calculateEnemyHealth(2, 'common'), // 14 HP
@@ -79,7 +77,6 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
   {
     id: 'gray_wolf',
     name: 'Gray Wolf',
-    emoji: '',
     level: 3,
     baseStats: {
       health: calculateEnemyHealth(3, 'common'), // 16 HP
@@ -98,7 +95,6 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
   {
     id: 'giant_spider',
     name: 'Giant Spider',
-    emoji: '',
     level: 4,
     baseStats: {
       health: calculateEnemyHealth(4, 'uncommon'), // 22 HP (18 * 1.2)
@@ -117,7 +113,6 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
   {
     id: 'orc_warrior',
     name: 'Orc Warrior',
-    emoji: '',
     level: 5,
     baseStats: {
       health: calculateEnemyHealth(5, 'uncommon'), // 24 HP (20 * 1.2)
@@ -136,7 +131,6 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
   {
     id: 'forest_wisp',
     name: 'Forest Wisp',
-    emoji: '',
     level: 6,
     baseStats: {
       health: calculateEnemyHealth(6, 'rare'), // 33 HP (22 * 1.5)
@@ -155,7 +149,6 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
   {
     id: 'ancient_bear',
     name: 'Ancient Bear',
-    emoji: '',
     level: 7,
     baseStats: {
       health: calculateEnemyHealth(7, 'rare'), // 36 HP (24 * 1.5)
@@ -174,7 +167,6 @@ export const greenwoodValleyMonsters: WildernessMonster[] = [
   {
     id: 'forest_guardian',
     name: 'Forest Guardian',
-    emoji: '',
     level: 8,
     baseStats: {
       health: calculateEnemyHealth(8, 'elite'), // 52 HP (26 * 2)

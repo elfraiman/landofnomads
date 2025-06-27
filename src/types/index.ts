@@ -104,7 +104,7 @@ export interface Item {
 export type ItemType = 'weapon' | 'shield' | 'armor' | 'helmet' | 'boots' | 'accessory' | 'gem';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
-export type GemType = 'ruby' | 'sapphire' | 'emerald' | 'diamond' | 'opal';
+export type GemType = 'ruby' | 'sapphire' | 'emerald' | 'diamond' | 'opal' | 'citrine' | 'amber';
 export type GemTier = 'flawed' | 'normal' | 'greater' | 'perfect' | 'legendary';
 
 export interface Gem extends Omit<Item, 'type'> {
@@ -113,6 +113,8 @@ export interface Gem extends Omit<Item, 'type'> {
   gemTier: GemTier;
   consumeEffect: {
     statBonus: Partial<CharacterStats>;
+    experienceBonus?: number; // Percentage bonus to experience gain
+    goldBonus?: number; // Percentage bonus to gold gain
     duration: number; // number of battles the effect lasts
     description: string;
   };
@@ -123,6 +125,8 @@ export interface ActiveGemEffect {
   gemType: GemType;
   gemTier: GemTier;
   statBonus: Partial<CharacterStats>;
+  experienceBonus?: number; // Percentage bonus to experience gain
+  goldBonus?: number; // Percentage bonus to gold gain
   battlesRemaining: number;
   description: string;
   appliedAt: number;
@@ -151,7 +155,6 @@ export interface DetailedBattleResult {
   monstersKilled: {
     name: string;
     level: number;
-    emoji: string;
     experience: number;
     gold: number;
   }[];

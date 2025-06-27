@@ -245,6 +245,43 @@ export const WildernessTab: React.FC = () => {
     return 0.6;
   };
 
+  const renderLegend = () => (
+    <View style={styles.legend}>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>P</Text>
+        <Text style={styles.legendText}>Player</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>G</Text>
+        <Text style={styles.legendText}>Grass</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>F</Text>
+        <Text style={styles.legendText}>Forest</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>M</Text>
+        <Text style={styles.legendText}>Mountain</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>C</Text>
+        <Text style={styles.legendText}>Cave</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>V</Text>
+        <Text style={styles.legendText}>Village</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>O</Text>
+        <Text style={styles.legendText}>Portal</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>S</Text>
+        <Text style={styles.legendText}>Shop</Text>
+      </View>
+    </View>
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {/* Map Header */}
@@ -477,43 +514,7 @@ export const WildernessTab: React.FC = () => {
         )}
       </View>
       {/* Legend */}
-      <View style={styles.legend}>
-        <Text style={styles.legendTitle}>Map Legend</Text>
-        <View style={styles.legendGrid}>
-          <View style={styles.legendItem}>
-            <Text style={styles.legendEmoji}>👤</Text>
-            <Text style={styles.legendText}>You</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <Text style={styles.legendEmoji}>🌱</Text>
-            <Text style={styles.legendText}>Plains</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <Text style={styles.legendEmoji}>🌲</Text>
-            <Text style={styles.legendText}>Forest</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <Text style={styles.legendEmoji}>⛰️</Text>
-            <Text style={styles.legendText}>Mountain</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <Text style={styles.legendEmoji}>🕳️</Text>
-            <Text style={styles.legendText}>Cave</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <Text style={styles.legendEmoji}>🏘️</Text>
-            <Text style={styles.legendText}>Village</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <Text style={styles.legendEmoji}>🌀</Text>
-            <Text style={styles.legendText}>Portal</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <Text style={styles.legendEmoji}>🏪</Text>
-            <Text style={styles.legendText}>Merchant</Text>
-          </View>
-        </View>
-      </View>
+      {renderLegend()}
 
       {/* Instructions */}
       <View style={styles.instructions}>
