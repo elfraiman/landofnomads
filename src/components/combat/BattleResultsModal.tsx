@@ -1,7 +1,8 @@
-import React from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { Character, DetailedBattleResult, Item } from '../../types';
 import { Colors, ColorUtils } from '../../utils/colors';
+import { getStatAbbreviation } from '../../utils/stats';
 import { useGame } from '../../context/GameContext';
 import { ItemStatsDisplay } from '../ui/ItemStatsDisplay';
 import { StatusBar } from '../ui/StatusBar';
@@ -21,6 +22,68 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
   onClose,
 }) => {
   const { currentCharacter, getExperiencePercentage, getExperienceToNextLevel, getActiveGemEffects } = useGame();
+  
+  // Animation for gem drops
+  const borderAnimValue = useRef(new Animated.Value(0)).current;
+  const glowAnimValue = useRef(new Animated.Value(0)).current;
+
+  // Always call useEffect to maintain hook order
+  useEffect(() => {
+    if (!visible || !battleResult) return;
+
+    const totalRewards = battleResult.totalRewards || { experience: 0, gold: 0, items: [] };
+    
+    // Check if any gems were dropped
+    const hasGemDrop = totalRewards.items && totalRewards.items.some(item => 
+      typeof item === 'string' && (item.includes('gem_') || item.includes('Ruby') || item.includes('Sapphire') || 
+      item.includes('Emerald') || item.includes('Diamond') || item.includes('Opal') || 
+      item.includes('Citrine') || item.includes('Amber'))
+    );
+
+    if (hasGemDrop) {
+      // Reset animations
+      borderAnimValue.setValue(0);
+      glowAnimValue.setValue(0);
+
+      // Start pulsing border animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(borderAnimValue, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: false,
+          }),
+          Animated.timing(borderAnimValue, {
+            toValue: 0,
+            duration: 1000,
+            useNativeDriver: false,
+          }),
+        ])
+      ).start();
+
+      // Start glow animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnimValue, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: false,
+          }),
+          Animated.timing(glowAnimValue, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: false,
+          }),
+        ])
+      ).start();
+    } else {
+      // Stop animations if no gem drop
+      borderAnimValue.stopAnimation();
+      glowAnimValue.stopAnimation();
+      borderAnimValue.setValue(0);
+      glowAnimValue.setValue(0);
+    }
+  }, [visible, battleResult, borderAnimValue, glowAnimValue]);
 
   if (!visible || !battleResult) return null;
 
@@ -32,69 +95,97 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
   const healthPercentage = (playerHealthAfter / playerMaxHealth) * 100;
   const healthColor = ColorUtils.getHealthColor(healthPercentage);
 
-  // Get detailed item information from inventory
-  const getDroppedItemDetails = (): Item[] => {
-    if (!currentCharacter || !totalRewards.items || totalRewards.items.length === 0) {
-      return [];
-    }
+  // Check if any gems were dropped
+  const hasGemDrop = totalRewards.items && totalRewards.items.some(item => 
+    typeof item === 'string' && (item.includes('gem_') || item.includes('Ruby') || item.includes('Sapphire') || 
+    item.includes('Emerald') || item.includes('Diamond') || item.includes('Opal') || 
+    item.includes('Citrine') || item.includes('Amber'))
+  );
 
-    // Get the most recently added items from inventory that match the dropped item count
-    // This is a best-effort approach since we don't have direct item references
-    const recentItems = currentCharacter.inventory.slice(-totalRewards.items.length);
-    return recentItems;
-  };
-
-  // Get item names from loot IDs for display
-  const getItemNamesFromLootIds = (): string[] => {
+  // Get item display data with colors
+  const getItemDisplayData = (): Array<{ name: string; color: string; isGem: boolean }> => {
     if (!totalRewards.items || totalRewards.items.length === 0) {
       return [];
     }
 
     return totalRewards.items.map(itemId => {
-      // Try to find the item in the findItemByLootId function scope
-      const lootIdToName: Record<string, string> = {
-        'bronze_dagger': 'Bronze Dagger',
-        'iron_daggers': 'Iron Daggers',
-        'iron_sword': 'Iron Sword',
-        'iron_battle_axe': 'Iron Battle Axe',
-        'steel_crossbow': 'Steel Crossbow',
-        'oak_short_bow': 'Oak Short Bow',
-        'willow_long_bow': 'Willow Long Bow',
-        'dimension_sword': 'Dimension Sword',
-        'arctic_blade': 'Arctic Blade',
-        'assassin_blade': 'Assassin\'s Dagger',
-        'dragon_sword': 'Dragon Sword',
-        'burning_axe': 'Burning Axe',
-        'dragonbone_sword': 'Dragonbone Sword',
-        'mystic_staff': 'Mystic Staff',
-        'fortress_hammer': 'Fortress Hammer',
-        'elven_longbow': 'Elven Longbow',
-        'crystal_wand': 'Crystal Wand',
-        'poison_blade': 'Poison Blade',
-        'berserker_axe': 'Berserker Axe',
-        'steel_blade': 'Steel Blade',
-        'knight_blade': 'Knight\'s Blade',
-        'guardian_shield': 'Guardian Shield',
-        'hunting_bow': 'Hunting Bow',
-        'rapier': 'Rapier',
+      const itemIdStr = String(itemId);
+      
+      // Check if it's a gem
+      const isGem = itemIdStr.includes('gem_') || 
+                   itemIdStr.includes('Ruby') || itemIdStr.includes('Sapphire') || 
+                   itemIdStr.includes('Emerald') || itemIdStr.includes('Diamond') || 
+                   itemIdStr.includes('Opal') || itemIdStr.includes('Citrine') || 
+                   itemIdStr.includes('Amber');
+
+      // Get gem colors
+      if (isGem) {
+        if (itemIdStr.includes('Ruby') || itemIdStr.includes('ruby')) {
+          return { name: itemIdStr, color: '#e74c3c', isGem: true }; // Red
+        } else if (itemIdStr.includes('Sapphire') || itemIdStr.includes('sapphire')) {
+          return { name: itemIdStr, color: '#3498db', isGem: true }; // Blue
+        } else if (itemIdStr.includes('Emerald') || itemIdStr.includes('emerald')) {
+          return { name: itemIdStr, color: '#2ecc71', isGem: true }; // Green
+        } else if (itemIdStr.includes('Diamond') || itemIdStr.includes('diamond')) {
+          return { name: itemIdStr, color: '#ecf0f1', isGem: true }; // White/Silver
+        } else if (itemIdStr.includes('Opal') || itemIdStr.includes('opal')) {
+          return { name: itemIdStr, color: '#9b59b6', isGem: true }; // Purple
+        } else if (itemIdStr.includes('Citrine') || itemIdStr.includes('citrine')) {
+          return { name: itemIdStr, color: '#f39c12', isGem: true }; // Orange
+        } else if (itemIdStr.includes('Amber') || itemIdStr.includes('amber')) {
+          return { name: itemIdStr, color: '#e67e22', isGem: true }; // Amber
+        }
+      }
+
+      // Regular items - use rarity colors or default
+      const lootIdToData: Record<string, { name: string; color: string }> = {
+        'bronze_dagger': { name: 'Bronze Dagger', color: Colors.common },
+        'iron_daggers': { name: 'Iron Daggers', color: Colors.common },
+        'iron_sword': { name: 'Iron Sword', color: Colors.common },
+        'iron_battle_axe': { name: 'Iron Battle Axe', color: Colors.uncommon },
+        'steel_crossbow': { name: 'Steel Crossbow', color: Colors.uncommon },
+        'oak_short_bow': { name: 'Oak Short Bow', color: Colors.common },
+        'willow_long_bow': { name: 'Willow Long Bow', color: Colors.uncommon },
+        'dimension_sword': { name: 'Dimension Sword', color: Colors.epic },
+        'arctic_blade': { name: 'Arctic Blade', color: Colors.rare },
+        'assassin_blade': { name: 'Assassin\'s Dagger', color: Colors.rare },
+        'dragon_sword': { name: 'Dragon Sword', color: Colors.legendary },
+        'burning_axe': { name: 'Burning Axe', color: Colors.epic },
+        'dragonbone_sword': { name: 'Dragonbone Sword', color: Colors.legendary },
+        'mystic_staff': { name: 'Mystic Staff', color: Colors.epic },
+        'fortress_hammer': { name: 'Fortress Hammer', color: Colors.epic },
+        'elven_longbow': { name: 'Elven Longbow', color: Colors.rare },
+        'crystal_wand': { name: 'Crystal Wand', color: Colors.rare },
+        'poison_blade': { name: 'Poison Blade', color: Colors.rare },
+        'berserker_axe': { name: 'Berserker Axe', color: Colors.epic },
+        'steel_blade': { name: 'Steel Blade', color: Colors.uncommon },
+        'knight_blade': { name: 'Knight\'s Blade', color: Colors.rare },
+        'guardian_shield': { name: 'Guardian Shield', color: Colors.rare },
+        'hunting_bow': { name: 'Hunting Bow', color: Colors.common },
+        'rapier': { name: 'Rapier', color: Colors.uncommon },
         // Armor items
-        'padded_undershirt': 'Padded Undershirt',
-        'field_jacket': 'Field Jacket',
-        'lattuce_shirt': 'Lattuce Shirt',
-        'tin_mail': 'Tin Mail',
-        'splint_mail': 'Splint Mail',
-        'fine_chain_mail': 'Fine Chain Mail',
-        'woven_scale_mail': 'Woven Scale Mail',
-        'mammoth_hide_armor': 'Mammoth Hide Armor',
-        'crimson_plate_mail': 'Crimson Plate Mail',
-        'kizmacs_training_mail': 'Kizmacs Training Mail',
+        'padded_undershirt': { name: 'Padded Undershirt', color: Colors.common },
+        'field_jacket': { name: 'Field Jacket', color: Colors.common },
+        'lattuce_shirt': { name: 'Lattuce Shirt', color: Colors.common },
+        'tin_mail': { name: 'Tin Mail', color: Colors.common },
+        'splint_mail': { name: 'Splint Mail', color: Colors.uncommon },
+        'fine_chain_mail': { name: 'Fine Chain Mail', color: Colors.uncommon },
+        'woven_scale_mail': { name: 'Woven Scale Mail', color: Colors.rare },
+        'mammoth_hide_armor': { name: 'Mammoth Hide Armor', color: Colors.rare },
+        'crimson_plate_mail': { name: 'Crimson Plate Mail', color: Colors.epic },
+        'kizmacs_training_mail': { name: 'Kizmacs Training Mail', color: Colors.uncommon },
         // Helmets
-        'iron_helm': 'Iron Helm',
-        'knight_helm': 'Knight Helm',
-        'crown_of_wisdom': 'Crown of Wisdom'
+        'iron_helm': { name: 'Iron Helm', color: Colors.common },
+        'knight_helm': { name: 'Knight Helm', color: Colors.uncommon },
+        'crown_of_wisdom': { name: 'Crown of Wisdom', color: Colors.legendary }
       };
 
-      return lootIdToName[itemId] || itemId;
+      const itemData = lootIdToData[itemIdStr];
+      return { 
+        name: itemData?.name || itemIdStr, 
+        color: itemData?.color || Colors.text, 
+        isGem: false 
+      };
     });
   };
 
@@ -354,10 +445,33 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
     );
   };
 
+  // Create animated styles for gem drop
+  const animatedModalStyle = hasGemDrop ? {
+    borderColor: borderAnimValue.interpolate({
+      inputRange: [0, 0.25, 0.5, 0.75, 1],
+      outputRange: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+    }),
+    borderWidth: 3,
+    shadowColor: glowAnimValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['rgba(255, 215, 0, 0)', 'rgba(255, 215, 0, 0.8)']
+    }),
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: glowAnimValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 20]
+    }),
+    elevation: glowAnimValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: [5, 15]
+    }),
+  } : {};
+
   return (
     <Modal visible={visible} transparent animationType="none">
       <View style={styles.overlay}>
-        <View style={styles.modal}>
+        <Animated.View style={[styles.modal, animatedModalStyle]}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Battle Results</Text>
@@ -369,97 +483,66 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Active Buffs/Auras Section */}
+            {/* Active Buffs & Auras Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Active Buffs & Auras</Text>
-              <View style={styles.buffsContainer}>
+              <Text style={styles.sectionTitle}>Active Effects</Text>
+              <View style={styles.compactBuffsContainer}>
                 {currentCharacter ? (
                   <>
                     {/* Active Gem Effects */}
                     {(() => {
-                      const activeGemEffects = getActiveGemEffects();
+                      const activeGemEffects = currentCharacter.activeGemEffects || [];
                       return activeGemEffects.length > 0 ? (
-                        activeGemEffects.map((effect: string, index: number) => {
-                          // Parse the effect string: "Gem Name: Description (X battles left)"
-                          const parts = effect.split(': ');
-                          const gemName = parts[0];
-                          const remainingPart = parts[1] || '';
-                          const descriptionMatch = remainingPart.match(/^(.+)\s+\((\d+)\s+battles?\s+left\)$/);
-                          const description = descriptionMatch ? descriptionMatch[1] : remainingPart;
-                          const battlesLeft = descriptionMatch ? descriptionMatch[2] : '?';
-                          
-                          return (
-                            <View key={`gem-${index}`} style={[styles.buffItem, styles.gemBuff]}>
-                              <View style={styles.buffHeader}>
-                                <Text style={styles.buffSource}>💎 {gemName}</Text>
-                                <Text style={styles.buffDuration}>({battlesLeft} battles left)</Text>
-                              </View>
-                              <View style={styles.buffEffects}>
-                                <View style={[styles.buffChip, styles.gemBuffChip]}>
-                                  <Text style={styles.buffText}>{description}</Text>
-                                </View>
-                              </View>
-                            </View>
-                          );
-                        })
-                      ) : null;
+                        <View style={styles.compactEffectsList}>
+                          {activeGemEffects.map((effect, index) => {
+                            // Get gem type color
+                            const gemData = require('../../data/gems').gemBaseData[effect.gemType];
+                            const isExpiring = effect.battlesRemaining <= 5;
+                            
+                            // Build all bonuses text
+                            const statBonuses = Object.entries(effect.statBonus)
+                              .filter(([_, bonus]) => bonus !== 0)
+                              .map(([stat, bonus]) => `${getStatAbbreviation(stat)} ${bonus > 0 ? '+' : ''}${bonus}`)
+                              .join(' ');
+                            
+                            const experienceBonus = effect.experienceBonus ? `EXP +${effect.experienceBonus}%` : '';
+                            const goldBonus = effect.goldBonus ? `GLD +${effect.goldBonus}%` : '';
+                            
+                            const allBonuses = [statBonuses, experienceBonus, goldBonus]
+                              .filter(Boolean)
+                              .join(' ');
+                            
+                            return (
+                              <Text key={`gem-${index}`} style={styles.compactEffectText}>
+                                <Text style={[styles.effectGemName, { color: gemData?.color || Colors.accent }]}>
+                                  {effect.gemName}
+                                </Text>
+                                <Text style={styles.effectSeparator}> • </Text>
+                                <Text style={[
+                                  styles.effectBattles,
+                                  { color: isExpiring ? Colors.error : Colors.textSecondary }
+                                ]}>
+                                  {effect.battlesRemaining}
+                                </Text>
+                                {allBonuses && (
+                                  <>
+                                    <Text style={styles.effectSeparator}> • </Text>
+                                    <Text style={styles.effectBonuses}>{allBonuses}</Text>
+                                  </>
+                                )}
+                              </Text>
+                            );
+                          })}
+                        </View>
+                      ) : (
+                        <Text style={styles.noEffectsText}>
+                          No active effects • Break gems to gain bonuses!
+                        </Text>
+                      );
                     })()}
-
-                    {/* Active Auras - Future implementation */}
-                    {/* This section will be populated with active auras that the player has acquired */}
-                    {/* 
-                    {currentCharacter.activeAuras && currentCharacter.activeAuras.length > 0 && (
-                      currentCharacter.activeAuras.map((aura: any, index: number) => (
-                        <View key={`aura-${index}`} style={[styles.buffItem, styles.auraItem]}>
-                          <View style={styles.buffHeader}>
-                            <Text style={styles.buffSource}>{aura.name}</Text>
-                            <Text style={styles.buffSlot}>({aura.type})</Text>
-                          </View>
-                          <View style={styles.buffEffects}>
-                            {aura.effects.map((effect: string, effectIndex: number) => (
-                              <View key={effectIndex} style={[styles.buffChip, styles.auraChip]}>
-                                <Text style={styles.buffText}>{effect}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      ))
-                    )}
-                    */}
-
-                    {/* Temporary Buffs - Potions, Spells, etc. */}
-                    {/* 
-                    {currentCharacter.temporaryBuffs && currentCharacter.temporaryBuffs.length > 0 && (
-                      currentCharacter.temporaryBuffs.map((buff: any, index: number) => (
-                        <View key={`temp-${index}`} style={[styles.buffItem, styles.temporaryBuff]}>
-                          <View style={styles.buffHeader}>
-                            <Text style={styles.buffSource}>{buff.name}</Text>
-                            <Text style={styles.buffSlot}>({buff.duration}s left)</Text>
-                          </View>
-                          <View style={styles.buffEffects}>
-                            {buff.effects.map((effect: string, effectIndex: number) => (
-                              <View key={effectIndex} style={[styles.buffChip, styles.temporaryBuffChip]}>
-                                <Text style={styles.buffText}>{effect}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      ))
-                    )}
-                    */}
-
-                    {/* Show message when no active buffs */}
-                    {getActiveGemEffects().length === 0 && (
-                      <View style={styles.noBuffsContainer}>
-                        <Text style={styles.noBuffsText}>No active buffs or auras</Text>
-                        <Text style={styles.noBuffsSubtext}>Consume gems or acquire auras to gain temporary bonuses!</Text>
-                      </View>
-                    )}
                   </>
                 ) : (
-                  <View style={styles.noBuffsContainer}>
-                    <Text style={styles.noBuffsText}>No character data available</Text>
-                  </View>
+                  <Text style={styles.noEffectsText}>No character data available</Text>
                 )}
               </View>
             </View>
@@ -514,31 +597,22 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
                   <View style={styles.itemsSection}>
                     <Text style={styles.rewardLabel}>Items Found ({totalRewards.items.length})</Text>
 
-                    {/* Show item names from loot IDs */}
+                    {/* Show item names with proper colors */}
                     <View style={styles.itemNamesContainer}>
-                      {getItemNamesFromLootIds().map((itemName, index) => (
-                        <View key={index} style={styles.itemNameChip}>
-                          <Text style={styles.itemNameText}>{itemName}</Text>
+                      {getItemDisplayData().map((itemData, index) => (
+                        <View key={index} style={[
+                          styles.itemNameChip,
+                          itemData.isGem && styles.gemItemChip
+                        ]}>
+                          <Text style={[
+                            styles.itemNameText,
+                            { color: itemData.color }
+                          ]}>
+                            {itemData.name}
+                          </Text>
                         </View>
                       ))}
                     </View>
-
-                    {/* Show detailed item stats if we can match them from inventory */}
-                    {getDroppedItemDetails().length > 0 && (
-                      <View style={styles.itemDetailsSection}>
-                        <Text style={styles.itemDetailsLabel}>Item Details:</Text>
-                        <View style={styles.itemsList}>
-                          {getDroppedItemDetails().map((item, index) => (
-                            <ItemStatsDisplay
-                              key={index}
-                              item={item}
-                              compact={true}
-                              showSlotInfo={true}
-                            />
-                          ))}
-                        </View>
-                      </View>
-                    )}
                   </View>
                 )}
               </View>
@@ -552,7 +626,7 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
               <Text style={styles.closeButtonText}>Continue</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -759,6 +833,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.accent,
     minHeight: 32,
+  },
+  gemItemChip: {
+    backgroundColor: Colors.surface,
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   itemNameText: {
     fontSize: 12,
@@ -1030,4 +1113,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-}); 
+  // Ultra-compact effects styles
+  compactBuffsContainer: {
+    gap: 4,
+  },
+  compactEffectsList: {
+    gap: 4,
+  },
+  compactEffectText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: Colors.text,
+  },
+  effectGemName: {
+    fontWeight: 'bold',
+  },
+  effectSeparator: {
+    color: Colors.textSecondary,
+  },
+  effectBattles: {
+    fontWeight: '500',
+  },
+  effectBonuses: {
+    color: Colors.success,
+    fontWeight: '500',
+  },
+  noEffectsText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+  },
+});

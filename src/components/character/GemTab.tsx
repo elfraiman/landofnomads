@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { View, TouchableOpacity, ScrollView, Dimensions, Animated, Easing } from 'react-native';
+import React, { useState } from 'react';
+import { View, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { useGame } from '../../context/GameContext';
 import Text from '../ui/DefaultText';
 import { RPGText } from '../ui/RPGText';
@@ -23,76 +23,26 @@ export const GemTab: React.FC = () => {
   const { showAlert, AlertComponent } = useCustomAlert();
 
   const [viewMode, setViewMode] = useState<'inventory' | 'effects' | 'guide' | 'fusion'>('inventory');
-  const [fusionMode, setFusionMode] = useState<{
-    active: boolean;
-    gemType?: GemType;
-    gemTier?: GemTier;
-    availableGems?: Gem[];
-  }>({
-    active: false
-  });
 
-  // Animation refs at component level
-  const sourceGemsAnim = useRef(new Animated.Value(1)).current;
-  const arrowAnim = useRef(new Animated.Value(1)).current;
-  const resultGemAnim = useRef(new Animated.Value(0)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
-  // Reset animations when fusion mode changes
-  React.useEffect(() => {
-    if (fusionMode.active) {
-      sourceGemsAnim.setValue(1);
-      arrowAnim.setValue(1);
-      resultGemAnim.setValue(0);
-      glowAnim.setValue(0);
-    }
-  }, [fusionMode.active]);
-
-  const runFusionAnimation = () => {
-    Animated.sequence([
-      // Fade out source gems
-      Animated.timing(sourceGemsAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      // Pulse arrow
-      Animated.sequence([
-        Animated.timing(arrowAnim, {
-          toValue: 1.5,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(arrowAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]),
-      // Show result gem with glow
-      Animated.parallel([
-        Animated.timing(resultGemAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(glowAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(glowAnim, {
-            toValue: 0,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]),
-    ]).start(() => {
-      // After animation completes, perform the actual fusion
-      performFusion();
-    });
+  const handlePerformFusion = async (gemType: GemType, currentTier: GemTier, gemsToFuse: Gem[]): Promise<{ success: boolean; result?: Gem; failureChance: number }> => {
+    const gemIds = gemsToFuse.map(gem => gem.id);
+    
+    // Import the fusion function to get the failure chance
+    const { fuseGems: fuseGemsUtil, gemTierData, getNextTier } = require('../../data/gems');
+    const nextTier = getNextTier(currentTier);
+    const failureChance = nextTier ? gemTierData[nextTier].fusionFailureChance : 0;
+    
+    // Perform the fusion
+    const fusionResult = fuseGemsUtil(gemsToFuse);
+    
+    // Update the game state
+    const success = fuseGems(gemIds);
+    
+    return {
+      success: fusionResult.success && success,
+      result: fusionResult.result,
+      failureChance
+    };
   };
 
   if (!gameState.currentCharacter) {
@@ -119,75 +69,7 @@ export const GemTab: React.FC = () => {
     return groups;
   }, {} as Record<string, Gem[]>);
 
-  const startFusion = (gemType: GemType, gemTier: GemTier) => {
-    const availableGems = gems.filter(gem =>
-      gem.gemType === gemType && gem.gemTier === gemTier
-    );
 
-    const nextTier = getNextTier(gemTier);
-    if (!nextTier) {
-      showAlert('Error', 'These gems are already at maximum tier (Legendary)');
-      return;
-    }
-
-    const requiredCount = gemTierData[gemTier].fusionCost;
-    if (availableGems.length < requiredCount) {
-      showAlert('Error', `Need ${requiredCount} gems of same type and tier to fuse`);
-      return;
-    }
-
-    setFusionMode({
-      active: true,
-      gemType,
-      gemTier,
-      availableGems
-    });
-    setViewMode('fusion');
-  };
-
-  const performFusion = () => {
-    if (!fusionMode.gemType || !fusionMode.gemTier || !fusionMode.availableGems) return;
-
-    const requiredCount = gemTierData[fusionMode.gemTier].fusionCost;
-
-    if (fusionMode.availableGems.length < requiredCount) {
-      showAlert('Error', 'Not enough gems available for this fusion');
-      return;
-    }
-
-    // Select the required number of gems for fusion (always just 1 fusion)
-    const gemsToFuse = fusionMode.availableGems.slice(0, requiredCount);
-    const gemIds = gemsToFuse.map(gem => gem.id);
-
-    // Perform single fusion
-    if (fuseGems(gemIds)) {
-      // Update available gems after fusion
-      const remainingGems = fusionMode.availableGems.slice(requiredCount);
-
-      // If we still have enough gems for another fusion, stay in fusion mode and reset animations
-      if (remainingGems.length >= requiredCount) {
-        setFusionMode({
-          ...fusionMode,
-          availableGems: remainingGems
-        });
-
-        // Reset animations for next fusion
-        sourceGemsAnim.setValue(1);
-        arrowAnim.setValue(1);
-        resultGemAnim.setValue(0);
-        glowAnim.setValue(0);
-      } else {
-        // Not enough gems left, exit fusion mode
-        setFusionMode({ active: false });
-        setViewMode('inventory');
-      }
-    }
-  };
-
-  const handleCancelFusion = () => {
-    setFusionMode({ active: false });
-    setViewMode('inventory');
-  };
 
   const renderTabBar = () => (
     <View style={styles.tabBar}>
@@ -217,26 +99,127 @@ export const GemTab: React.FC = () => {
     </View>
   );
 
-  const renderEffectsView = () => (
-    <ScrollView style={styles.container}>
-      {activeEffects.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No active effects</Text>
-          <Text style={styles.emptySubtext}>
-            Break gems to release their power and gain temporary stat boosts!
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.effectsList}>
-          {activeEffects.map((effect, index) => (
-            <View key={index} style={styles.effectItem}>
-              <Text style={styles.effectText}>{effect}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </ScrollView>
-  );
+  const renderEffectsView = () => {
+    const character = gameState.currentCharacter;
+    const activeGemEffects = character?.activeGemEffects || [];
+
+    return (
+      <ScrollView style={styles.container}>
+        {activeGemEffects.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No active effects</Text>
+            <Text style={styles.emptySubtext}>
+              Break gems to release their power and gain temporary stat boosts!
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.effectsList}>
+            <Text style={styles.sectionTitle}>
+              Active Gem Effects ({activeGemEffects.length})
+            </Text>
+            {activeGemEffects.map((effect, index) => {
+              const gemData = gemBaseData[effect.gemType];
+              const tierData = gemTierData[effect.gemTier];
+              const remainingBattles = effect.battlesRemaining;
+              const isExpiring = remainingBattles <= 5;
+              
+              return (
+                <View key={index} style={[
+                  styles.effectCard,
+                  { borderLeftColor: gemData.color, borderLeftWidth: 4 }
+                ]}>
+                  {/* Header */}
+                  <View style={styles.effectHeader}>
+                    <View style={styles.effectTitle}>
+                      <Text style={[styles.gemName, { color: gemData.color }]}>
+                        {effect.gemName}
+                      </Text>
+                      <Text style={[styles.gemTier, { color: ColorUtils.getRarityColor(tierData.rarity) }]}>
+                        {tierData.name}
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.battlesRemaining,
+                      { backgroundColor: isExpiring ? Colors.error : Colors.primary }
+                    ]}>
+                      <Text style={styles.battlesText}>
+                        {remainingBattles}
+                      </Text>
+                      <Text style={styles.battlesLabel}>
+                        battles
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Effect Description */}
+                  <Text style={styles.effectDescription}>
+                    {effect.description}
+                  </Text>
+
+                  {/* Stat Bonuses */}
+                  <View style={styles.bonusesContainer}>
+                    {Object.entries(effect.statBonus).map(([stat, bonus]) => (
+                      bonus !== 0 && (
+                        <View key={stat} style={styles.bonusItem}>
+                          <Text style={styles.bonusLabel}>
+                            {stat.charAt(0).toUpperCase() + stat.slice(1)}
+                          </Text>
+                          <Text style={[
+                            styles.bonusValue,
+                            { color: bonus > 0 ? Colors.success : Colors.error }
+                          ]}>
+                            {bonus > 0 ? '+' : ''}{bonus}
+                          </Text>
+                        </View>
+                      )
+                    ))}
+                    
+                    {/* Experience Bonus */}
+                    {effect.experienceBonus && (
+                      <View style={styles.bonusItem}>
+                        <Text style={styles.bonusLabel}>Experience</Text>
+                        <Text style={[styles.bonusValue, { color: Colors.accent }]}>
+                          +{effect.experienceBonus}%
+                        </Text>
+                      </View>
+                    )}
+                    
+                    {/* Gold Bonus */}
+                    {effect.goldBonus && (
+                      <View style={styles.bonusItem}>
+                        <Text style={styles.bonusLabel}>Gold</Text>
+                        <Text style={[styles.bonusValue, { color: Colors.gold }]}>
+                          +{effect.goldBonus}%
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Duration Progress Bar */}
+                  <View style={styles.durationContainer}>
+                    <View style={styles.durationBar}>
+                      <View
+                        style={[
+                          styles.durationFill,
+                          {
+                            width: `${(remainingBattles / tierData.duration) * 100}%`,
+                            backgroundColor: isExpiring ? Colors.error : Colors.primary
+                          }
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.durationText}>
+                      {remainingBattles} / {tierData.duration} battles remaining
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
 
   const renderGuideView = () => (
     <ScrollView style={styles.container}>
@@ -282,7 +265,6 @@ export const GemTab: React.FC = () => {
           <GemInventory
             gems={gems}
             groupedGems={groupedGems}
-            onStartFusion={startFusion}
           />
         )}
 
@@ -290,13 +272,8 @@ export const GemTab: React.FC = () => {
 
         {viewMode === 'fusion' && (
           <GemFusionLab
-            fusionMode={fusionMode}
-            sourceGemsAnim={sourceGemsAnim}
-            arrowAnim={arrowAnim}
-            resultGemAnim={resultGemAnim}
-            glowAnim={glowAnim}
-            onRunFusionAnimation={runFusionAnimation}
-            onCancelFusion={handleCancelFusion}
+            gems={gems}
+            onPerformFusion={handlePerformFusion}
           />
         )}
 
@@ -368,16 +345,110 @@ const styles = {
     padding: 16,
   },
 
-  effectItem: {
+  effectCard: {
     backgroundColor: Colors.surface,
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
   },
 
-  effectText: {
+     effectHeader: {
+     flexDirection: 'row' as const,
+     alignItems: 'center' as const,
+     justifyContent: 'space-between' as const,
+     marginBottom: 8,
+   },
+
+   effectTitle: {
+     flexDirection: 'row' as const,
+     alignItems: 'center' as const,
+     flex: 1,
+   },
+
+  gemName: {
+    fontSize: 16,
+    fontWeight: 'bold' as const,
+    marginRight: 8,
+  },
+
+  gemTier: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+
+     battlesRemaining: {
+     paddingHorizontal: 8,
+     paddingVertical: 4,
+     borderRadius: 6,
+     alignItems: 'center' as const,
+   },
+
+   battlesText: {
+     fontSize: 16,
+     color: Colors.background,
+     fontWeight: 'bold' as const,
+   },
+
+   battlesLabel: {
+     fontSize: 10,
+     color: Colors.background,
+     opacity: 0.8,
+   },
+
+  effectDescription: {
     fontSize: 14,
     color: Colors.text,
+  },
+
+     bonusesContainer: {
+     flexDirection: 'row' as const,
+     flexWrap: 'wrap' as const,
+     gap: 8,
+     marginTop: 8,
+     marginBottom: 8,
+   },
+
+   bonusItem: {
+     backgroundColor: Colors.background,
+     paddingHorizontal: 8,
+     paddingVertical: 4,
+     borderRadius: 4,
+     borderWidth: 1,
+     borderColor: Colors.border,
+   },
+
+   bonusLabel: {
+     fontSize: 10,
+     color: Colors.textSecondary,
+     textTransform: 'uppercase' as const,
+     fontWeight: '600' as const,
+   },
+
+   bonusValue: {
+     fontSize: 14,
+     fontWeight: 'bold' as const,
+     marginTop: 2,
+   },
+
+  durationContainer: {
+    marginTop: 8,
+  },
+
+  durationBar: {
+    height: 12,
+    backgroundColor: Colors.border,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+
+     durationFill: {
+     height: 12,
+     borderRadius: 6,
+   },
+
+  durationText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
   },
 
   guideSection: {

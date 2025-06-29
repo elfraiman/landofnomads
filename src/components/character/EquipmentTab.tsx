@@ -195,7 +195,7 @@ const EquipmentTab: React.FC<EquipmentTabProps> = ({ character }) => {
                             benefit.isNegative ? { color: Colors.error } : {}
                           ]} numberOfLines={1}>
                             • {benefit.text}
-                          </Text>
+        </Text>
                         ))
                       ) : (
                         <Text style={styles.noBenefitText}>No bonuses</Text>

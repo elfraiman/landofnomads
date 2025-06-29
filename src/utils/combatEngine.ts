@@ -365,33 +365,33 @@ const executeCombatRound = (
   attackerConfig.attacks.forEach((weaponAttack, attackIndex) => {
     if (defenderStats.health <= 0) return; // Stop if defender is already defeated
 
-    let action: CombatAction = 'attack';
-    let damage = 0;
-    let isCritical = false;
-    let isDodged = false;
+  let action: CombatAction = 'attack';
+  let damage = 0;
+  let isCritical = false;
+  let isDodged = false;
     let wasBlocked = false;
 
-    // Check if attack hits first
-    if (!checkHit(attackerStats.accuracy, defenderStats.dodge)) {
-      action = 'miss';
+  // Check if attack hits first
+  if (!checkHit(attackerStats.accuracy, defenderStats.dodge)) {
+    action = 'miss';
+  } else {
+    // Check for dodge (separate from accuracy)
+    if (Math.random() * 100 < defenderStats.dodge) {
+      action = 'dodge';
+      isDodged = true;
     } else {
-      // Check for dodge (separate from accuracy)
-      if (Math.random() * 100 < defenderStats.dodge) {
-        action = 'dodge';
-        isDodged = true;
-      } else {
-        // Attack hits, calculate base damage
+      // Attack hits, calculate base damage
         let baseDamage = Math.floor(attackerStats.damage * (weaponAttack.damage / Math.max(1, attackerConfig.attacks.reduce((sum, a) => sum + a.damage, 0))));
         baseDamage = Math.max(1, baseDamage + weaponAttack.damage);
 
-        // Check for critical hit (includes speed bonus)
+      // Check for critical hit (includes speed bonus)
         const totalCritChance = attackerStats.criticalChance + weaponAttack.criticalChance;
         if (checkCritical(totalCritChance, attackerStats.speed, defenderStats.speed)) {
-          isCritical = true;
+        isCritical = true;
           anyCritical = true;
-          action = 'critical';
-          baseDamage = Math.floor(baseDamage * 2.5); // 2.5x damage on crit
-        }
+        action = 'critical';
+        baseDamage = Math.floor(baseDamage * 2.5); // 2.5x damage on crit
+      }
 
         // Apply armor mitigation, damage variance, and shield blocking
         const damageResult = calculateDamage(
@@ -404,29 +404,29 @@ const executeCombatRound = (
         damage = damageResult.damage;
         wasBlocked = damageResult.wasBlocked;
 
-        // Apply damage to defender
-        defenderStats.health = Math.max(0, defenderStats.health - damage);
+      // Apply damage to defender
+      defenderStats.health = Math.max(0, defenderStats.health - damage);
         totalDamage += damage;
         anyHit = true;
-      }
     }
+  }
 
     const description = generateCombatDescription(attacker, defender, action, damage, isCritical, weaponAttack.weaponName, wasBlocked);
 
     // Create combat round for this attack
     rounds.push({
       roundNumber: roundNumber + (attackIndex * 0.1), // Sub-rounds for multiple attacks
-      attacker,
-      defender,
-      action,
-      damage,
-      isCritical,
-      isDodged,
-      attackerHealthBefore,
-      attackerHealthAfter: attackerStats.health,
+    attacker,
+    defender,
+    action,
+    damage,
+    isCritical,
+    isDodged,
+    attackerHealthBefore,
+    attackerHealthAfter: attackerStats.health,
       defenderHealthBefore: defenderStats.health - (totalDamage - damage), // Health before this specific attack
-      defenderHealthAfter: defenderStats.health,
-      description
+    defenderHealthAfter: defenderStats.health,
+    description
     });
   });
 
@@ -736,6 +736,8 @@ export const consumeGem = (character: Character, gem: any): Character => {
     gemType: gem.gemType,
     gemTier: gem.gemTier,
     statBonus: gem.consumeEffect.statBonus,
+    experienceBonus: gem.consumeEffect.experienceBonus,
+    goldBonus: gem.consumeEffect.goldBonus,
     battlesRemaining: gem.consumeEffect.duration,
     description: gem.consumeEffect.description,
     appliedAt: Date.now()

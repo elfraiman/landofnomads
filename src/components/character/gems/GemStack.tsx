@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
-import Text from '../../ui/DefaultText';
-import { Colors } from '../../../utils/colors';
-import { gemBaseData, gemTierData, getNextTier } from '../../../data/gems';
-import { Gem, GemType, GemTier } from '../../../types/index';
+import { TouchableOpacity, View } from 'react-native';
 import { useGame } from '../../../context/GameContext';
+import { gemBaseData, gemTierData, getNextTier } from '../../../data/gems';
+import { Gem, GemTier, GemType } from '../../../types/index';
+import { Colors } from '../../../utils/colors';
 import { useCustomAlert } from '../../ui/CustomAlert';
+import Text from '../../ui/DefaultText';
 
 interface GemStackProps {
   gemType: string;
@@ -46,10 +46,11 @@ export const GemStack: React.FC<GemStackProps> = ({
     );
   };
 
-  const handleSellGem = (gemId: string, gemName: string, price: number) => {
+  const handleSellGem = (gemId: string, gemName: string, fullPrice: number) => {
+    const sellPrice = Math.floor(fullPrice * 0.5); // 50% of original price
     showAlert(
       'Sell Gem',
-      `Sell ${gemName} for ${price} gold?`,
+      `Sell ${gemName} for ${sellPrice} gold?\n\n(50% of original price)`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -60,7 +61,7 @@ export const GemStack: React.FC<GemStackProps> = ({
             addNotification({
               type: 'success',
               title: 'Gem Sold',
-              message: `Sold ${gemName} for ${price} gold!`,
+              message: `Sold ${gemName} for ${sellPrice} gold!`,
               duration: 2000
             });
           }
@@ -100,7 +101,7 @@ export const GemStack: React.FC<GemStackProps> = ({
             onPress={() => handleSellGem(gem.id, gem.name, gem.price)}
           >
             <Text style={[styles.actionButtonText, { color: Colors.gold }]}>
-              {gem.price}g
+              Sell {Math.floor(gem.price * 0.5)}g
             </Text>
           </TouchableOpacity>
 
@@ -110,21 +111,6 @@ export const GemStack: React.FC<GemStackProps> = ({
           >
             <Text style={[styles.actionButtonText, { color: gemData.color }]}>Break</Text>
           </TouchableOpacity>
-
-          {canFuse && (
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.actionButtonCompact,
-                { backgroundColor: Colors.surface }
-              ]}
-              onPress={() => onStartFusion(gem.gemType as GemType, gem.gemTier as GemTier)}
-            >
-              <Text style={[styles.actionButtonText, { color: gemData.color }]}>
-                Fuse ({count}/{tierData.fusionCost})
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
       <AlertComponent />

@@ -826,14 +826,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const newExploredTiles = new Set(wildernessState.exploredTiles);
     newExploredTiles.add(tileId);
 
-    // Check for monster spawn
-    const now = Date.now();
-    const timeSinceLastSpawn = now - targetTile.lastSpawnCheck;
-    const minSpawnCooldown = 250; // 3 seconds minimum between spawn attempts
 
-    if (timeSinceLastSpawn > minSpawnCooldown && Math.random() < targetTile.spawnRate) {
+    if ( Math.random() < targetTile.spawnRate) {
       spawnMonsterOnTile(targetTile);
-      targetTile.lastSpawnCheck = now;
     }
 
     // Update wilderness state
@@ -842,8 +837,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       playerPosition: newPosition,
       exploredTiles: newExploredTiles
     } : null);
-
-    // No auto-save on movement - let players save manually or on major events
   };
 
   const spawnMonsterOnTile = (tile: any): void => {
@@ -1259,9 +1252,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Add actual items to inventory (not string IDs)
         console.log(`Loot - Generated: ${lootResult.items.length} items`, lootResult.items.map(i => `${i.name} (${i.type})`));
 
+        // Add all items to character inventory first
+        const updatedInventory = [...character.inventory, ...lootResult.items];
+        console.log(`Inventory - Adding ${lootResult.items.length} items to inventory. New size: ${updatedInventory.length}`);
+
+        // Show notifications for dropped items
         lootResult.items.forEach(item => {
-          console.log(`Inventory - Adding item to inventory: ${item.name} (${item.type}, ID: ${item.id})`);
-          addItemToInventory(item);
+          console.log(`Inventory - Item added to inventory: ${item.name} (${item.type}, ID: ${item.id})`);
 
           // Show special notification for gem drops
           if (item.type === 'gem') {
@@ -1269,7 +1266,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log(`Gem Drop - Gem dropped: ${gem.name} (${gem.gemType}, ${gem.gemTier})`);
             addNotification({
               type: 'gem_drop',
-              title: '💎 Rare Gem Found!',
+              title: 'Rare Gem Found!',
               message: `${spawnedMonster.monster.name} dropped a ${gem.name}! This valuable gem can boost your stats or be fused with others for greater power.`,
               duration: 5000
             });
@@ -1305,14 +1302,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           gold: rewards.gold
         });
 
-        // Apply rewards and update character
+        // Apply rewards and update character (including the new inventory)
         let updatedCharacter = {
           ...character,
+          inventory: updatedInventory,
           experience: character.experience + rewards.experience,
           gold: character.gold + rewards.gold,
           currentHealth: playerHealthAfter,
           wins: character.wins + 1
         };
+        
+
 
         // Update gem effects after combat (reduce duration)
         try {
@@ -1771,9 +1771,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getAvailableMaps = () => {
     if (!gameState.currentCharacter) return [];
 
-    // For now, return all maps - we'll filter by level in the UI
-    // TODO: Track defeated bosses in character data
-    return mapConfigs;
+    try {
+      if (!mapConfigs || !Array.isArray(mapConfigs) || mapConfigs.length === 0) {
+        console.error('mapConfigs is invalid:', mapConfigs);
+        return [];
+      }
+      
+      return mapConfigs;
+    } catch (error) {
+      console.error('Error in getAvailableMaps:', error);
+      return [];
+    }
   };
 
   const canAccessMap = (mapId: string): boolean => {
@@ -1887,29 +1895,44 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       const { fuseGems: fuseGemsUtil } = require('../data/gems');
-      const fusedGem = fuseGemsUtil(gems);
+      const fusionResult = fuseGemsUtil(gems);
 
-      if (!fusedGem) return false;
-
-      // Remove consumed gems and add fused gem
+      // Remove consumed gems regardless of success/failure (they are destroyed)
       const updatedCharacter = {
         ...character,
-        inventory: [
-          ...character.inventory.filter(item => !gemIds.includes(item.id)),
-          fusedGem
-        ]
+        inventory: character.inventory.filter(item => !gemIds.includes(item.id))
       };
 
+      if (!fusionResult.success) {
+        // Fusion failed - gems are destroyed
+        updateCharacter(updatedCharacter);
+
+        addNotification({
+          type: 'gem_drop',
+          title: 'Fusion Failed!',
+          message: `Fusion failed (${(fusionResult.failureChance * 100).toFixed(0)}% chance)! Your ${gems.length} ${gems[0].name}s were destroyed in the process.`,
+          duration: 4000,
+          gemDetails: {
+            name: gems[0].name,
+            gemType: gems[0].gemType
+          }
+        });
+
+        return false;
+      }
+
+      // Fusion succeeded - add the result gem
+      updatedCharacter.inventory.push(fusionResult.result!);
       updateCharacter(updatedCharacter);
 
       addNotification({
         type: 'gem_drop',
-        title: 'Gems Fused!',
-        message: `${gems.length} ${gems[0].name}s fused into ${fusedGem.name}!`,
+        title: 'Fusion Successful!',
+        message: `${gems.length} ${gems[0].name}s successfully fused into ${fusionResult.result!.name}!`,
         duration: 3000,
         gemDetails: {
-          name: fusedGem.name,
-          gemType: fusedGem.gemType
+          name: fusionResult.result!.name,
+          gemType: fusionResult.result!.gemType
         }
       });
 

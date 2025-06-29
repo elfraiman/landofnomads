@@ -8,13 +8,11 @@ import { GemStack } from './GemStack';
 interface GemInventoryProps {
   gems: Gem[];
   groupedGems: Record<string, Gem[]>;
-  onStartFusion: (gemType: GemType, gemTier: GemTier) => void;
 }
 
 export const GemInventory: React.FC<GemInventoryProps> = ({
   gems,
-  groupedGems,
-  onStartFusion
+  groupedGems
 }) => {
   return (
     <ScrollView style={styles.content}>
@@ -36,7 +34,6 @@ export const GemInventory: React.FC<GemInventoryProps> = ({
                   gemType={gemType}
                   gemTier={gemTier}
                   gemsInStack={gemsInStack}
-                  onStartFusion={onStartFusion}
                 />
               );
             })}

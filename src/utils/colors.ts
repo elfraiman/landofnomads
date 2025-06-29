@@ -103,6 +103,55 @@ export const Colors = {
   neutral: '#9CA3AF',             // Gray for neutral text
 } as const;
 
+// Map-specific gradient themes for unique location atmosphere
+export const MapGradients = {
+  greenwood_valley: {
+    name: 'Greenwood Valley',
+    primary: '#2D5016',           // Deep forest green
+    secondary: '#4A7C59',         // Lighter forest green
+    accent: '#8FBC8F',            // Sage green
+    tileBase: '#1A4D14',          // Dark green base
+    tileBorder: '#2D5016',        // Primary as border
+    atmosphere: 'Lush and peaceful forest atmosphere'
+  },
+  shadowmere_swamps: {
+    name: 'Shadowmere Swamps',
+    primary: '#2D4A22',           // Dark swamp green
+    secondary: '#4A4A2D',         // Murky brown-green
+    accent: '#6B8E23',            // Olive green
+    tileBase: '#1C2E1C',          // Very dark green
+    tileBorder: '#2D4A22',        // Primary as border
+    atmosphere: 'Dark and mysterious swamp atmosphere'
+  },
+  crystal_caverns: {
+    name: 'Crystal Caverns',
+    primary: '#1E3A8A',           // Deep crystal blue
+    secondary: '#3730A3',         // Rich purple-blue
+    accent: '#60A5FA',            // Bright crystal blue
+    tileBase: '#1E1B4B',          // Dark blue base
+    tileBorder: '#1E3A8A',        // Primary as border
+    atmosphere: 'Mystical underground crystal atmosphere'
+  },
+  volcanic_peaks: {
+    name: 'Volcanic Peaks',
+    primary: '#991B1B',           // Deep volcanic red
+    secondary: '#DC2626',         // Bright red
+    accent: '#F97316',            // Orange-red
+    tileBase: '#7F1D1D',          // Dark red base
+    tileBorder: '#991B1B',        // Primary as border
+    atmosphere: 'Scorching volcanic atmosphere'
+  },
+  frozen_wastes: {
+    name: 'Frozen Wastes',
+    primary: '#1E40AF',           // Deep ice blue
+    secondary: '#3B82F6',         // Bright blue
+    accent: '#93C5FD',            // Light ice blue
+    tileBase: '#1E3A8A',          // Dark blue base
+    tileBorder: '#1E40AF',        // Primary as border
+    atmosphere: 'Frigid arctic atmosphere'
+  }
+} as const;
+
 // Helper functions for color manipulation
 export const ColorUtils = {
   // Add transparency to a color
@@ -197,6 +246,69 @@ export const ColorUtils = {
       default:
         return Colors.primary;
     }
+  },
+
+  // Get map gradient theme
+  getMapGradient: (mapId: string) => {
+    const validMapId = mapId as keyof typeof MapGradients;
+    return MapGradients[validMapId] || MapGradients.greenwood_valley;
+  },
+
+  // Get tile colors based on map and tile type
+  getTileColors: (mapId: string, tileType: string, isCurrentPosition: boolean = false, isAvailableMove: boolean = false, isVisited: boolean = true): { backgroundColor: string; borderColor: string } => {
+    const gradient = ColorUtils.getMapGradient(mapId);
+    
+    let backgroundColor: string = gradient.tileBase;
+    let borderColor: string = gradient.tileBorder;
+    
+    // Special states override base colors
+    if (isCurrentPosition) {
+      backgroundColor = ColorUtils.withOpacity(gradient.accent, 0.3);
+      borderColor = gradient.accent;
+    } else if (isAvailableMove) {
+      backgroundColor = ColorUtils.withOpacity(gradient.secondary, 0.2);
+      borderColor = gradient.secondary;
+    }
+    
+    // Tile type variations within the map theme
+    switch (tileType) {
+      case 'portal':
+        backgroundColor = ColorUtils.withOpacity(Colors.info, 0.2);
+        borderColor = Colors.info;
+        break;
+      case 'merchant':
+        backgroundColor = ColorUtils.withOpacity(Colors.accent, 0.2);
+        borderColor = Colors.accent;
+        break;
+      case 'village':
+        backgroundColor = ColorUtils.withOpacity(gradient.accent, 0.15);
+        borderColor = gradient.accent;
+        break;
+      case 'cave':
+      case 'ruins':
+        backgroundColor = ColorUtils.withOpacity(gradient.primary, 0.8);
+        borderColor = gradient.primary;
+        break;
+    }
+    
+    // Reduce opacity for unvisited tiles
+    if (!isVisited) {
+      backgroundColor = ColorUtils.withOpacity(backgroundColor, 0.3);
+      borderColor = ColorUtils.withOpacity(borderColor, 0.3);
+    }
+    
+    return { backgroundColor, borderColor };
+  },
+
+  // Create gradient style for backgrounds
+  createMapGradientStyle: (mapId: string) => {
+    const gradient = ColorUtils.getMapGradient(mapId);
+    return {
+      backgroundColor: ColorUtils.withOpacity(gradient.primary, 0.15),
+      // For React Native, we can use a subtle gradient effect with borderColor
+      borderTopColor: ColorUtils.withOpacity(gradient.secondary, 0.3),
+      borderBottomColor: ColorUtils.withOpacity(gradient.primary, 0.15),
+    };
   },
 
   // Parse combat text for player vs enemy coloring with damage number highlighting

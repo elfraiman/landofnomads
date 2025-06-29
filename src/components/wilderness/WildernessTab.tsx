@@ -4,7 +4,7 @@ import { useGame } from '../../context/GameContext';
 import { DetailedBattleResult } from '../../types';
 import { BattleResultsModal } from '../combat/BattleResultsModal';
 import { useCustomAlert } from '../ui/CustomAlert';
-import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
+import { Colors, ColorUtils, RPGTextStyles, MapGradients } from '../../utils/colors';
 import { PortalModal } from './PortalModal';
 import { MerchantModal } from './MerchantModal';
 import { getTileEmoji } from '../../data/wilderness';
@@ -229,8 +229,21 @@ export const WildernessTab: React.FC = () => {
     const isAvailableMove = availableMoves.some(move => move.x === x && move.y === y);
     const isVisited = tile.visited;
 
+    // Get map-specific colors
+    const tileColors = ColorUtils.getTileColors(
+      currentMap.id, 
+      tile.type, 
+      isCurrentPosition, 
+      isAvailableMove && !isCurrentPosition, 
+      isVisited
+    );
+
     return [
       styles.tile,
+      {
+        backgroundColor: tileColors.backgroundColor,
+        borderColor: tileColors.borderColor,
+      },
       isCurrentPosition && styles.currentTile,
       isAvailableMove && !isCurrentPosition && styles.availableTile,
       !isVisited && styles.unexploredTile
@@ -247,37 +260,40 @@ export const WildernessTab: React.FC = () => {
 
   const renderLegend = () => (
     <View style={styles.legend}>
-      <View style={styles.legendItem}>
-        <Text style={styles.legendEmoji}>P</Text>
-        <Text style={styles.legendText}>Player</Text>
-      </View>
-      <View style={styles.legendItem}>
-        <Text style={styles.legendEmoji}>G</Text>
-        <Text style={styles.legendText}>Grass</Text>
-      </View>
-      <View style={styles.legendItem}>
-        <Text style={styles.legendEmoji}>F</Text>
-        <Text style={styles.legendText}>Forest</Text>
-      </View>
-      <View style={styles.legendItem}>
-        <Text style={styles.legendEmoji}>M</Text>
-        <Text style={styles.legendText}>Mountain</Text>
-      </View>
-      <View style={styles.legendItem}>
-        <Text style={styles.legendEmoji}>C</Text>
-        <Text style={styles.legendText}>Cave</Text>
-      </View>
-      <View style={styles.legendItem}>
-        <Text style={styles.legendEmoji}>V</Text>
-        <Text style={styles.legendText}>Village</Text>
-      </View>
-      <View style={styles.legendItem}>
-        <Text style={styles.legendEmoji}>O</Text>
-        <Text style={styles.legendText}>Portal</Text>
-      </View>
-      <View style={styles.legendItem}>
-        <Text style={styles.legendEmoji}>S</Text>
-        <Text style={styles.legendText}>Shop</Text>
+      <Text style={styles.legendTitle}>Tile Legend</Text>
+      <View style={styles.legendGrid}>
+        <View style={styles.legendItem}>
+          <Text style={styles.legendEmoji}>P</Text>
+          <Text style={styles.legendText}>Player</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <Text style={styles.legendEmoji}>G</Text>
+          <Text style={styles.legendText}>Grass</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <Text style={styles.legendEmoji}>F</Text>
+          <Text style={styles.legendText}>Forest</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <Text style={styles.legendEmoji}>M</Text>
+          <Text style={styles.legendText}>Mountain</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <Text style={styles.legendEmoji}>C</Text>
+          <Text style={styles.legendText}>Cave</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <Text style={styles.legendEmoji}>V</Text>
+          <Text style={styles.legendText}>Village</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <Text style={styles.legendEmoji}>O</Text>
+          <Text style={styles.legendText}>Portal</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <Text style={styles.legendEmoji}>S</Text>
+          <Text style={styles.legendText}>Shop</Text>
+        </View>
       </View>
     </View>
   );
@@ -285,9 +301,12 @@ export const WildernessTab: React.FC = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {/* Map Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, ColorUtils.createMapGradientStyle(currentMap.id)]}>
         <Text style={styles.title}>{currentMap.name}</Text>
         <Text style={styles.subtitle}>{currentMap.description}</Text>
+        <Text style={styles.atmosphereText}>
+          {ColorUtils.getMapGradient(currentMap.id).atmosphere}
+        </Text>
         <View style={styles.positionInfo}>
           <Text style={styles.positionText}>
             Position: ({playerPosition.x}, {playerPosition.y})
@@ -300,7 +319,7 @@ export const WildernessTab: React.FC = () => {
           </Text>
           {__DEV__ && (
             <Text style={styles.devInfo}>
-              🛠️ Dev Mode | Level: {currentCharacter?.level || 1} | Check Character Stats for dev tools
+              DEV MODE | Level: {currentCharacter?.level || 1} | Check Character Stats for dev tools
             </Text>
           )}
         </View>
@@ -355,7 +374,7 @@ export const WildernessTab: React.FC = () => {
 
 
       {/* Map Grid */}
-      <View style={styles.mapContainer}>
+      <View style={[styles.mapContainer, { borderColor: ColorUtils.getMapGradient(currentMap.id).secondary }]}>
         <View style={styles.mapGrid}>
           {currentMap.tiles.map((row, y) => (
             <View key={y} style={styles.mapRow}>
@@ -398,7 +417,7 @@ export const WildernessTab: React.FC = () => {
 
       {/* Portal Section - Show when on a portal tile */}
       {currentTile.features?.some(f => f.type === 'portal' && f.isActive) && (
-        <View style={styles.portalSection}>
+        <View style={[styles.portalSection, { borderColor: ColorUtils.getMapGradient(currentMap.id).accent }]}>
           <Text style={styles.sectionTitle}>🌀 Portal Hub</Text>
           <Text style={styles.portalDescription}>
             A mystical portal that can transport you to other realms. Each realm offers unique challenges and rewards!
@@ -416,12 +435,12 @@ export const WildernessTab: React.FC = () => {
                   styles.mapPreviewItem,
                   canAccessMap(map.id) ? styles.mapPreviewAvailable : styles.mapPreviewLocked
                 ]}>
-                  {map.id === 'greenwood_valley' ? '🌲' :
-                    map.id === 'shadowmere_swamps' ? '🐊' :
-                      map.id === 'crystal_caverns' ? '💎' :
-                        map.id === 'volcanic_peaks' ? '🌋' :
-                          map.id === 'frozen_wastes' ? '❄️' : '🗺️'} {map.name}
-                  {!canAccessMap(map.id) && ' 🔒'}
+                  [{map.id === 'greenwood_valley' ? 'FOREST' :
+                    map.id === 'shadowmere_swamps' ? 'SWAMP' :
+                      map.id === 'crystal_caverns' ? 'CAVES' :
+                        map.id === 'volcanic_peaks' ? 'VOLCANO' :
+                          map.id === 'frozen_wastes' ? 'FROZEN' : 'MAP'}] {map.name}
+                  {!canAccessMap(map.id) && ' [LOCKED]'}
                 </Text>
               ))}
             </View>
@@ -434,7 +453,7 @@ export const WildernessTab: React.FC = () => {
             activeOpacity={0.7}
           >
             <Text style={[styles.portalButtonText, (isMoving || isFighting) && styles.portalButtonTextDisabled]}>
-              🌀 Open Portal
+              Open Portal
             </Text>
           </TouchableOpacity>
         </View>
@@ -442,8 +461,8 @@ export const WildernessTab: React.FC = () => {
 
       {/* Merchant Section - Show when on a merchant tile */}
       {(currentTile.type === 'merchant' || currentTile.npcs?.some(npc => npc.type === 'merchant')) && (
-        <View style={styles.merchantSection}>
-          <Text style={styles.merchantSectionTitle}>🏪 Merchant</Text>
+        <View style={[styles.merchantSection, { borderColor: ColorUtils.getMapGradient(currentMap.id).accent }]}>
+          <Text style={styles.merchantSectionTitle}>Merchant</Text>
           <Text style={styles.merchantDescription}>
             A traveling merchant has set up shop here with goods suited to this region. Browse their wares to find equipment perfect for the challenges ahead!
           </Text>
@@ -466,7 +485,7 @@ export const WildernessTab: React.FC = () => {
             activeOpacity={0.7}
           >
             <Text style={[styles.merchantButtonText, (isMoving || isFighting) && styles.merchantButtonTextDisabled]}>
-              🏪 Browse Wares
+              Browse Wares
             </Text>
           </TouchableOpacity>
         </View>
@@ -476,10 +495,25 @@ export const WildernessTab: React.FC = () => {
       <View style={styles.monstersSection}>
         {currentTile.spawnedMonsters.filter(m => m.isAlive).length > 0 ? (
           <>
-            <Text style={styles.monstersSectionTitle}>
-              Monsters in {currentTile.name}
+            <View style={styles.monstersSectionHeader}>
+              <Text style={styles.monstersSectionTitle}>
+                Monsters in {currentTile.name}
+              </Text>
+              <Text style={styles.monstersCount}>
+                ({currentTile.spawnedMonsters.filter(m => m.isAlive).length})
+              </Text>
+            </View>
+            <Text style={styles.scrollHint}>
+              Scroll to see all monsters • Tap to fight
             </Text>
-            <ScrollView style={styles.monstersScrollView}>
+            <ScrollView 
+              style={styles.monstersScrollView}
+              contentContainerStyle={styles.monstersScrollContent}
+              showsVerticalScrollIndicator={true}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
+              keyboardShouldPersistTaps="handled"
+            >
               {currentTile.spawnedMonsters
                 .filter(m => m.isAlive)
                 .map((spawnedMonster) => (
@@ -501,7 +535,7 @@ export const WildernessTab: React.FC = () => {
                       </View>
                       <View style={styles.monsterStats}>
                         <Text style={styles.monsterStat}>
-                          Attack
+                          Tap to Fight
                         </Text>
                       </View>
                     </View>
@@ -618,9 +652,16 @@ const styles = StyleSheet.create({
   subtitle: {
     ...RPGTextStyles.body,
     color: Colors.textSecondary,
-    marginBottom: 20,
+    marginBottom: 12,
     lineHeight: 20,
     textAlign: 'center',
+  },
+  atmosphereText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginBottom: 20,
   },
   positionInfo: {
     alignItems: 'center'
@@ -740,34 +781,65 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 2,
     borderColor: Colors.border,
-    minHeight: 120,
     shadowColor: Colors.error,
     shadowOpacity: 0.2,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
+  monstersSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4
+  },
   monstersSectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: Colors.text,
-    marginBottom: 8
+  },
+  monstersCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.error,
+    backgroundColor: Colors.surfaceElevated,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.error,
+  },
+  scrollHint: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   monstersScrollView: {
-    maxHeight: 200
-  },
-  monsterCard: {
+    height: 200,
     backgroundColor: Colors.surfaceElevated,
     borderRadius: 8,
-    padding: 12,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: Colors.borderAccent,
-    marginBottom: 8,
+  },
+  monstersScrollContent: {
+    paddingVertical: 8,
+    paddingBottom: 16,
+  },
+  monsterCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginHorizontal: 8,
+    marginVertical: 4,
     shadowColor: Colors.error,
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   monsterCardContent: {
     flexDirection: 'row',
@@ -929,26 +1001,28 @@ const styles = StyleSheet.create({
   legendGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 16
+    justifyContent: 'space-between',
+    gap: 8
   },
   legendItem: {
     alignItems: 'center',
     backgroundColor: Colors.surfaceElevated,
-    borderRadius: 8,
-    padding: 8,
-    minWidth: 50,
+    borderRadius: 6,
+    padding: 6,
+    minWidth: 45,
+    flex: 1,
+    maxWidth: '22%',
     borderWidth: 1,
     borderColor: Colors.borderAccent,
   },
   legendEmoji: {
-    fontSize: 14,
-    marginBottom: 4,
+    fontSize: 12,
+    marginBottom: 2,
     color: Colors.text,
     fontWeight: 'bold',
   },
   legendText: {
-    ...RPGTextStyles.caption,
+    fontSize: 10,
     color: Colors.textSecondary,
     textAlign: 'center',
     fontWeight: '600',

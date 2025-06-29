@@ -38,25 +38,25 @@ export const TileComponent: React.FC<TileComponentProps> = ({
     // Each tile type can have custom rendering logic
     switch (tile.type) {
       case 'village':
-        return '🏘️';
+        return 'T';
       case 'forest':
-        return '🌲';
+        return 'F';
       case 'mountain':
-        return '⛰️';
+        return 'M';
       case 'water':
-        return '🌊';
+        return 'W';
       case 'cave':
-        return '🕳️';
+        return 'C';
       case 'ruins':
-        return '🏛️';
+        return 'R';
       case 'grass':
-        return '🌱';
+        return 'G';
       case 'road':
-        return '🛤️';
+        return 'r';
       case 'portal':
-        return '🌀';
+        return 'P';
       default:
-        return '❓';
+        return '?';
     }
   };
 
@@ -78,12 +78,12 @@ export const TileComponent: React.FC<TileComponentProps> = ({
 
         {/* Portal indicator */}
         {hasPortal && (
-          <Text style={styles.portalIndicator}>🌀</Text>
+          <Text style={styles.portalIndicator}>P</Text>
         )}
 
         {/* NPC indicator */}
         {hasNPCs && (
-          <Text style={styles.npcIndicator}>👤</Text>
+          <Text style={styles.npcIndicator}>N</Text>
         )}
 
         {/* Monster count indicator */}

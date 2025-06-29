@@ -92,6 +92,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
 
   return (
     <View style={styles.container}>
+      
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.characterInfo}>

@@ -17,7 +17,18 @@ const getSlotText = (item: Item) => {
   return item.type.charAt(0).toUpperCase() + item.type.slice(1);
 };
 
-
+const getItemTypeIcon = (item: Item) => {
+  switch (item.type) {
+    case 'weapon': return 'W';
+    case 'armor': return 'A';
+    case 'shield': return 'S';
+    case 'helmet': return 'H';
+    case 'boots': return 'B';
+    case 'accessory': return 'R';
+    case 'gem': return 'G';
+    default: return '?';
+  }
+};
 
 export const ItemStatsDisplay: React.FC<ItemStatsDisplayProps> = ({
   item,
@@ -25,256 +36,176 @@ export const ItemStatsDisplay: React.FC<ItemStatsDisplayProps> = ({
   compact = false
 }) => {
   const rarityColor = ColorUtils.getRarityColor(item.rarity);
+  const itemIcon = getItemTypeIcon(item);
 
-  // Combine all stat bonuses into individual items with color info
+  // Get primary stats to display
+  const primaryStats = [];
+  if (item.damage) primaryStats.push({ label: 'Damage', value: item.damage, color: Colors.weapon });
+  if (item.armor) primaryStats.push({ label: 'Defense', value: item.armor, color: Colors.armor });
+  if (item.criticalChance) primaryStats.push({ label: 'Critical', value: `${item.criticalChance}%`, color: Colors.criticalDamage });
+  if (item.blockChance) primaryStats.push({ label: 'Block', value: `${item.blockChance}%`, color: Colors.block });
+  if (item.dodgeChance) primaryStats.push({ label: 'Dodge', value: `${item.dodgeChance}%`, color: Colors.dodge });
+
+  // Get stat bonuses
   const statBonuses = Object.entries(item.statBonus || {})
     .filter(([_, bonus]) => bonus !== 0)
     .map(([stat, bonus]) => {
       const statName = {
         strength: 'Strength',
         dexterity: 'Dexterity',
-        constitution: 'Constitution',
+        constitution: 'Health',
         intelligence: 'Intelligence',
         speed: 'Speed'
       }[stat] || stat;
-      const text = bonus > 0 ? `+${bonus} ${statName}` : `${bonus} ${statName}`;
-      return { text, isNegative: bonus < 0 };
+      return { 
+        label: statName, 
+        value: bonus > 0 ? `+${bonus}` : `${bonus}`, 
+        color: bonus < 0 ? Colors.error : Colors.success 
+      };
     });
+
+  const durabilityPercentage = (item.durability / item.maxDurability) * 100;
+  const durabilityColor = durabilityPercentage > 70 ? Colors.success : 
+                         durabilityPercentage > 30 ? Colors.warning : Colors.error;
 
   return (
     <View style={[
       styles.container,
       {
         borderColor: rarityColor,
-        shadowColor: rarityColor,
-        shadowOpacity: 0.4,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 6,
+        backgroundColor: Colors.surface,
       }
     ]}>
-      {/* Main Content */}
-      <View style={styles.content}>
-        {/* Header with Name, Level, and Rarity */}
-        <View style={styles.header}>
-          <View style={styles.titleSection}>
-            <Text style={[styles.itemName, { color: rarityColor }]} numberOfLines={1}>
-              {item.name}
-            </Text>
-            <View style={styles.subtitleRow}>
-              <Text style={styles.itemLevel}>Lvl {item.level}</Text>
-              {showSlotInfo && (
-                <>
-                  <Text style={styles.separator}>•</Text>
-                  <Text style={styles.slotText}>
-                    {getSlotText(item)}
-                  </Text>
-                </>
-              )}
-              <Text style={styles.separator}>•</Text>
-              <Text style={[styles.rarityText, { color: rarityColor }]}>
-                {item.rarity.toUpperCase()}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.priceContainer}>
-            <Text style={styles.priceText}>{item.price.toLocaleString()}</Text>
-            <Text style={styles.priceLabel}>gold</Text>
-          </View>
+
+      {/* Center - Item Info */}
+      <View style={styles.infoContainer}>
+        {/* Item Name and Type */}
+        <View style={styles.nameRow}>
+          <Text style={[styles.itemName, { color: rarityColor }]} numberOfLines={1}>
+            {item.name}<Text style={styles.itemType}> - {getSlotText(item)}</Text>
+          </Text>
+     
         </View>
 
-        {/* Stats Section */}
-        <View style={styles.statsSection}>
-          {/* Combat Stats */}
-          <View style={styles.combatStats}>
-            {item.damage && (
-              <Text style={[styles.statText, { color: Colors.weapon }]}>
-                {item.damage} Damage
-              </Text>
-            )}
-            {item.armor && (
-              <Text style={[styles.statText, { color: Colors.armor }]}>
-                {item.armor} Armor
-              </Text>
-            )}
-            {item.weaponSpeed && (
-              <Text style={[styles.statText, { color: item.weaponSpeed < 0 ? Colors.error : Colors.lightning }]}>
-                {item.weaponSpeed} Speed
-              </Text>
-            )}
-            {item.criticalChance && (
-              <Text style={[styles.statText, { color: Colors.criticalDamage }]}>
-                {item.criticalChance}% Critical
-              </Text>
-            )}
-            {item.dodgeChance && (
-              <Text style={[styles.statText, { color: Colors.dodge }]}>
-                {item.dodgeChance}% Dodge
-              </Text>
-            )}
-            {item.blockChance && (
-              <Text style={[styles.statText, { color: Colors.block }]}>
-                {item.blockChance}% Block
-              </Text>
-            )}
-          </View>
+        {/* Stats Row */}
+        <View style={styles.statsRow}>
+          {/* Primary Combat Stats */}
+          {primaryStats.map((stat, index) => (
+            <View key={index} style={styles.statGroup}>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+              <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
+            </View>
+          ))}
 
           {/* Stat Bonuses */}
-          {statBonuses.length > 0 && (
-            <View style={styles.bonusContainer}>
-              {statBonuses.map((bonus, index) => (
-                <Text 
-                  key={index} 
-                  style={[
-                    styles.bonusText, 
-                    { color: bonus.isNegative ? Colors.error : Colors.success }
-                  ]}
-                >
-                  {bonus.text}
-                  {index < statBonuses.length - 1 ? ', ' : ''}
-                </Text>
-              ))}
+          {statBonuses.map((bonus, index) => (
+            <View key={`bonus-${index}`} style={styles.statGroup}>
+              <Text style={styles.statLabel}>{bonus.label}</Text>
+              <Text style={[styles.statValue, { color: bonus.color }]}>{bonus.value}</Text>
             </View>
-          )}
-        </View>
-
-        {/* Footer with Durability */}
-        <View style={styles.footer}>
-          <View style={styles.durabilityContainer}>
-            <View style={styles.durabilityBar}>
-              <View
-                style={[
-                  styles.durabilityFill,
-                  {
-                    width: `${(item.durability / item.maxDurability) * 100}%`,
-                    backgroundColor: item.durability > item.maxDurability * 0.7 ? Colors.success :
-                      item.durability > item.maxDurability * 0.3 ? Colors.warning : Colors.error
-                  }
-                ]}
-              />
-            </View>
-            <Text style={styles.durabilityText}>
-              {item.durability}/{item.maxDurability}
-            </Text>
-          </View>
+          ))}
         </View>
       </View>
+
+        {/* Right - Price */}
+       <View style={styles.priceContainer}>
+         <Text style={styles.priceValue}>{item.price.toLocaleString()}</Text>
+         <Text style={styles.priceLabel}>G</Text>
+       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.surface,
-    borderRadius: 6,
-    borderWidth: 1,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  content: {
-    padding: 8,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 6,
-  },
-  titleSection: {
-    flex: 1,
-    marginRight: 8,
-  },
-  itemName: {
-    ...RPGTextStyles.h3,
-    marginBottom: 2,
-  },
-  subtitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    borderWidth: 2,
+    padding: 8,
+    minHeight: 60,
+    gap: 12,
   },
-  itemLevel: {
-    ...RPGTextStyles.label,
-    color: Colors.textSecondary,
+  iconContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: Colors.background,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
-  separator: {
-    ...RPGTextStyles.caption,
-    color: Colors.textMuted,
-    marginHorizontal: 4,
-  },
-  slotText: {
-    ...RPGTextStyles.label,
-    color: Colors.textSecondary,
-  },
-  rarityText: {
-    ...RPGTextStyles.label,
+  itemIcon: {
+    ...RPGTextStyles.h2,
     fontWeight: '700',
   },
-  priceContainer: {
-    alignItems: 'flex-end',
-  },
-  priceText: {
-    ...RPGTextStyles.stat,
-    color: Colors.gold,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  priceLabel: {
+  levelText: {
     ...RPGTextStyles.caption,
     color: Colors.textSecondary,
-  },
-  statsSection: {
-    marginVertical: 6,
-
-  },
-  combatStats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 3,
-  
-  },
-  statText: {
-    ...RPGTextStyles.body,
-    fontWeight: '700',
-  },
-  bonusContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
-  },
-  bonusText: {
-    ...RPGTextStyles.bodySmall,
+    position: 'absolute',
+    bottom: -2,
+    fontSize: 10,
     fontWeight: '600',
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  durabilityContainer: {
+  infoContainer: {
     flex: 1,
+    gap: 4,
+  },
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
-  durabilityBar: {
+  itemName: {
+    ...RPGTextStyles.body,
+    fontWeight: '700',
     flex: 1,
-    height: 4,
-    backgroundColor: Colors.background,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
   },
-  durabilityFill: {
-    height: '100%',
-    borderRadius: 1,
-  },
-  durabilityText: {
+  itemType: {
     ...RPGTextStyles.caption,
     color: Colors.textSecondary,
-    minWidth: 45,
+    fontWeight: '500',
   },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  statGroup: {
+    alignItems: 'center',
+  },
+  statLabel: {
+    ...RPGTextStyles.caption,
+    color: Colors.textSecondary,
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  statValue: {
+    ...RPGTextStyles.bodySmall,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 4,
+  },
+  priceValue: {
+    ...RPGTextStyles.body,
+    color: Colors.gold,
+    fontWeight: '700',
+  },
+     priceLabel: {
+     ...RPGTextStyles.caption,
+     color: Colors.textSecondary,
+     fontWeight: '600',
+   },
 }); 

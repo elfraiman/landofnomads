@@ -89,7 +89,7 @@ const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
             {/* Developer Tools - Only visible in development mode */}
             {__DEV__ && (
               <View style={styles.devSection}>
-                <Text style={styles.devSectionTitle}>🛠️ Developer Tools</Text>
+                <Text style={styles.devSectionTitle}>Developer Tools</Text>
                 <View style={styles.devButtonsContainer}>
                   <TouchableOpacity
                     style={styles.devButton}
@@ -131,7 +131,7 @@ const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
                       );
                     }}
                   >
-                    <Text style={styles.devButtonText}>🚀 Max Level (999)</Text>
+                    <Text style={styles.devButtonText}>Max Level (999)</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -147,7 +147,7 @@ const CharacterStatsTab: React.FC<CharacterStatsTabProps> = ({ character }) => {
                       showAlert('Resources Added!', 'Added 10,000 gold and 50 stat points!');
                     }}
                   >
-                    <Text style={styles.devButtonText}>💰 Add Resources</Text>
+                    <Text style={styles.devButtonText}>Add Resources</Text>
                   </TouchableOpacity>
                 </View>
               </View>

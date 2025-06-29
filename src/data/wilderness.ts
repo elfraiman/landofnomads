@@ -28,7 +28,7 @@ interface LootDrop {
 }
 
 // Map configuration interface
-interface MapConfig {
+export interface MapConfig {
   id: string;
   name: string;
   description: string;

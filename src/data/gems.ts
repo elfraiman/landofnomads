@@ -115,6 +115,8 @@ export const gemTierData: Record<GemTier, {
   duration: number; // battles
   fusionCost: number; // how many of previous tier needed
   dropChanceModifier: number; // Modifier for drop chance (1.0 = normal, 0.5 = half chance, etc.)
+  fusionFailureChance: number; // Chance of fusion failure (0.0 to 1.0)
+  statMultiplier: number; // Additional multiplier for stat values based on rarity
 }> = {
   flawed: {
     name: 'Flawed',
@@ -122,7 +124,9 @@ export const gemTierData: Record<GemTier, {
     rarity: 'common',
     duration: 20,
     fusionCost: 2, // 2 flawed = 1 normal
-    dropChanceModifier: 1.0 // Base drop chance
+    dropChanceModifier: 1.0, // Base drop chance
+    fusionFailureChance: 0.05, // 5% failure chance
+    statMultiplier: 1.0 // Base stat multiplier
   },
   normal: {
     name: 'Normal',
@@ -130,7 +134,9 @@ export const gemTierData: Record<GemTier, {
     rarity: 'uncommon',
     duration: 45,
     fusionCost: 2, // 2 flawed = 1 normal
-    dropChanceModifier: 0.6 // 60% of base chance
+    dropChanceModifier: 0.6, // 60% of base chance
+    fusionFailureChance: 0.10, // 10% failure chance
+    statMultiplier: 1.2 // 20% bonus to stats
   },
   greater: {
     name: 'Greater',
@@ -138,7 +144,9 @@ export const gemTierData: Record<GemTier, {
     rarity: 'rare',
     duration: 85,
     fusionCost: 2, // 2 normal = 1 greater
-    dropChanceModifier: 0.3 // 30% of base chance
+    dropChanceModifier: 0.3, // 30% of base chance
+    fusionFailureChance: 0.15, // 15% failure chance
+    statMultiplier: 1.5 // 50% bonus to stats
   },
   perfect: {
     name: 'Perfect',
@@ -146,7 +154,9 @@ export const gemTierData: Record<GemTier, {
     rarity: 'epic',
     duration: 180,
     fusionCost: 2, // 2 greater = 1 perfect
-    dropChanceModifier: 0.1 // 10% of base chance
+    dropChanceModifier: 0.1, // 10% of base chance
+    fusionFailureChance: 0.20, // 20% failure chance
+    statMultiplier: 2.0 // 100% bonus to stats
   },
   legendary: {
     name: 'Legendary',
@@ -154,7 +164,9 @@ export const gemTierData: Record<GemTier, {
     rarity: 'legendary',
     duration: 300,
     fusionCost: 4, // 4 perfect = 1 legendary
-    dropChanceModifier: 0.02 // 2% of base chance (extremely rare)
+    dropChanceModifier: 0.02, // 2% of base chance (extremely rare)
+    fusionFailureChance: 0.25, // 25% failure chance
+    statMultiplier: 3.0 // 200% bonus to stats
   }
 };
 
@@ -165,7 +177,7 @@ export const createGem = (gemType: GemType, gemTier: GemTier, level: number = 1)
   const tierName = tierData.name ? `${tierData.name} ` : '';
 
   if (baseData.baseEffect.statType === 'experienceBonus') {
-    const bonusValue = Math.floor(baseData.baseEffect.baseValue * tierData.multiplier);
+    const bonusValue = Math.floor(baseData.baseEffect.baseValue * tierData.multiplier * tierData.statMultiplier);
     return {
       id: `gem_${gemType}_${gemTier}_${Date.now()}_${Math.random()}`,
       name: `${tierName}${baseData.name}`,
@@ -189,7 +201,7 @@ export const createGem = (gemType: GemType, gemTier: GemTier, level: number = 1)
   }
 
   if (baseData.baseEffect.statType === 'goldBonus') {
-    const bonusValue = Math.floor(baseData.baseEffect.baseValue * tierData.multiplier);
+    const bonusValue = Math.floor(baseData.baseEffect.baseValue * tierData.multiplier * tierData.statMultiplier);
     return {
       id: `gem_${gemType}_${gemTier}_${Date.now()}_${Math.random()}`,
       name: `${tierName}${baseData.name}`,
@@ -213,7 +225,7 @@ export const createGem = (gemType: GemType, gemTier: GemTier, level: number = 1)
   }
 
   // Handle stat bonus gems (existing functionality)
-  const effectValue = Math.floor(baseData.baseEffect.baseValue * tierData.multiplier);
+  const effectValue = Math.floor(baseData.baseEffect.baseValue * tierData.multiplier * tierData.statMultiplier);
   const statType = baseData.baseEffect.statType as keyof CharacterStats;
 
   return {
@@ -291,18 +303,33 @@ export const getNextTier = (currentTier: GemTier): GemTier | null => {
 };
 
 // Fuse gems into higher tier
-export const fuseGems = (gems: Gem[]): Gem | null => {
-  if (!canFuseGems(gems)) return null;
+export const fuseGems = (gems: Gem[]): { success: boolean; result?: Gem; failureChance: number } => {
+  if (!canFuseGems(gems)) return { success: false, failureChance: 0 };
 
   const firstGem = gems[0];
   const nextTier = getNextTier(firstGem.gemTier);
 
-  if (!nextTier) return null;
+  if (!nextTier) return { success: false, failureChance: 0 };
+
+  // Get failure chance for the target tier
+  const failureChance = gemTierData[nextTier].fusionFailureChance;
+  
+  // Roll for success/failure
+  const roll = Math.random();
+  const success = roll >= failureChance;
+
+  if (!success) {
+    return { success: false, failureChance };
+  }
 
   // Use average level of input gems
   const avgLevel = Math.floor(gems.reduce((sum, gem) => sum + gem.level, 0) / gems.length);
 
-  return createGem(firstGem.gemType, nextTier, avgLevel);
+  return { 
+    success: true, 
+    result: createGem(firstGem.gemType, nextTier, avgLevel),
+    failureChance 
+  };
 };
 
 // Generate random gem drop

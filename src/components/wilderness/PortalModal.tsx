@@ -1,17 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
 import { Colors } from '../../utils/colors';
-
-interface MapConfig {
-  id: string;
-  name: string;
-  description: string;
-  levelRange: { min: number; max: number };
-  portalRequirement?: {
-    minLevel: number;
-    bossDefeated?: string;
-  };
-}
+import { MapConfig } from '../../data/wilderness';
 
 interface PortalModalProps {
   visible: boolean;
@@ -51,11 +41,11 @@ export const PortalModal: React.FC<PortalModalProps> = ({
         return `🔒 Level ${map.portalRequirement.minLevel} Required`;
       }
       if (map.portalRequirement?.bossDefeated) {
-        return `⚔️ Defeat ${map.portalRequirement.bossDefeated}`;
+        return `Defeat ${map.portalRequirement.bossDefeated}`;
       }
-      return '🔒 Locked';
+              return 'Locked';
     }
-    return '✅ Available';
+          return 'Available';
   };
 
   const getMapEmoji = (mapId: string): string => {
@@ -153,8 +143,11 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     maxHeight: '80%',
+    minHeight: '60%',
     borderWidth: 2,
     borderColor: Colors.accent,
+    flex: 1,
+    flexDirection: 'column',
   },
   header: {
     alignItems: 'center',
@@ -175,6 +168,7 @@ const styles = StyleSheet.create({
   },
   mapList: {
     flex: 1,
+    minHeight: 300,
   },
   mapItem: {
     padding: 15,

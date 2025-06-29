@@ -84,19 +84,12 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
           ]
         );
       }
-    } else if (item.type === 'gem') {
-      // Gems cannot be equipped - they are consumables
-      showAlert(
-        'Cannot Equip Gem',
-        'Gems are consumable items that provide temporary stat boosts. Go to the Gems tab to consume or fuse them.',
-        [{ text: 'OK', style: 'default' }]
-      );
-      return;
+
     } else {
-      // For non-weapons and non-gems, use the existing logic
-      const slotMap: Record<Exclude<ItemType, 'gem'>, keyof Character['equipment']> = {
+      // For non-weapons, use the existing logic
+        const slotMap: Record<Exclude<ItemType, 'gem'>, keyof Character['equipment']> = {
         weapon: 'mainHand', // This won't be used due to above check
-        shield: 'offHand',  // Shields go to off-hand
+          shield: 'offHand',  // Shields go to off-hand
         armor: 'armor',
         helmet: 'helmet',
         boots: 'boots',
@@ -176,10 +169,13 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
 
   const getFilteredInventory = () => {
     const inventory = activeCharacter.inventory || [];
+    // Always filter out gems since they're shown in the Gem Inventory tab
+    const nonGemInventory = inventory.filter(item => item.type !== 'gem');
+    
     if (selectedFilter === 'all') {
-      return inventory;
+      return nonGemInventory;
     }
-    return inventory.filter(item => item.type === selectedFilter);
+    return nonGemInventory.filter(item => item.type === selectedFilter);
   };
 
   const getEquipmentSlots = () => {
@@ -258,7 +254,7 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
 
         {/* Inventory Filter */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Inventory ({(activeCharacter.inventory || []).length} items)</Text>
+          <Text style={styles.sectionTitle}>Inventory ({(activeCharacter.inventory || []).filter(item => item.type !== 'gem').length} items)</Text>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
             {filterOptions.map(filter => (
