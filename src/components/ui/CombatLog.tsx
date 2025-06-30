@@ -1,253 +1,129 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { Colors, ColorUtils } from '../../utils/colors';
+import { ScrollView, StyleSheet, Text, View, TextStyle } from 'react-native';
+import { Colors } from '../../utils/colors';
+import { DetailedBattleResult } from '../../types';
+
+// Helper to push styled text
+const pushText = (arr: React.ReactNode[], text: string, style: TextStyle): void => {
+  if (text) arr.push(<Text key={arr.length} style={style}>{text}</Text>);
+};
 
 interface CombatLogProps {
-  entries: string[];
-  playerName: string;
-  weaponName?: string;
-  weaponRarity?: string;
-}
-
-interface CombatLogEntry {
-  text: string;
-  type: 'normal' | 'critical' | 'miss' | 'dodge' | 'victory' | 'defeat' | 'info' | 'header';
-  playerAction?: boolean;
-  damage?: number;
-  weaponName?: string;
-  weaponRarity?: string;
+  result: DetailedBattleResult;
+  maxHeight?: number;
+  showScrollIndicator?: boolean;
+  nestedScrollEnabled?: boolean;
 }
 
 export const CombatLog: React.FC<CombatLogProps> = ({
-  entries,
-  playerName,
-  weaponName,
-  weaponRarity = 'common'
+  result,
+  maxHeight = 180,
+  showScrollIndicator = true,
+  nestedScrollEnabled = true,
 }) => {
-  
-  // Parse a single combat log entry into structured data
-  const parseEntry = (entry: string): CombatLogEntry => {
-    const lowerEntry = entry.toLowerCase();
-    
-    // Determine entry type
-    let type: CombatLogEntry['type'] = 'normal';
-    let playerAction = false;
-    let damage: number | undefined;
-    let entryWeaponName: string | undefined;
-    let entryWeaponRarity: string | undefined;
-    
-    // Check for different combat actions
-    if (lowerEntry.includes('critical hit') || lowerEntry.includes('devastating critical hit')) {
-      type = 'critical';
-    } else if (lowerEntry.includes('dodge')) {
-      type = 'dodge';
-    } else if (lowerEntry.includes('miss') || lowerEntry.includes('goes wide')) {
-      type = 'miss';
-    } else if (lowerEntry.includes('victory') || lowerEntry.includes('defeated!')) {
-      type = 'victory';
-    } else if (lowerEntry.includes('defeat') || lowerEntry.includes('slain')) {
-      type = 'defeat';
-    } else if (entry.startsWith('===') || entry.startsWith('---') || entry.startsWith('-=')) {
-      type = 'header';
-    } else if (lowerEntry.includes('rewards:') || lowerEntry.includes('experience') || lowerEntry.includes('gold') || lowerEntry.includes('items')) {
-      type = 'info';
+  const {
+    combatLog,
+    playerName,
+    weaponName,
+    weaponRarity = 'common',
+    offHandWeaponName,
+    offHandWeaponRarity = 'common',
+    monsterName,
+    monsterMaxHealth,
+  } = result;
+
+  const renderCombatLogEntry = (entry: string, index: number) => {
+    const playerNamePattern = new RegExp(`\\b${playerName}\\b`, 'g');
+    const mainWeaponPattern = weaponName ? new RegExp(`\\b${weaponName}\\b`, 'gi') : null;
+    const offHandWeaponPattern = offHandWeaponName ? new RegExp(`\\b${offHandWeaponName}\\b`, 'gi') : null;
+    const damagePattern = /(\d+)( damage)/g;
+
+    let parts: React.ReactNode[] = [];
+    let working = entry;
+
+    // Detect crit
+    const isCrit = entry.includes('CRITICAL HIT') || entry.includes('DEVASTATING CRITICAL HIT');
+    const damageColor = isCrit ? Colors.criticalDamage : Colors.gold;
+
+    // Highlight player name
+    working = working.replace(playerNamePattern, '%%PLAYER%%');
+    // Highlight weapons
+    if (mainWeaponPattern) working = working.replace(mainWeaponPattern, '%%MAINWEAPON%%');
+    if (offHandWeaponPattern) working = working.replace(offHandWeaponPattern, '%%OFFHANDWEAPON%%');
+    // Highlight damage numbers
+    working = working.replace(damagePattern, '%%DMG%%$1%%DMGEND%%$2');
+
+    // If this entry is the first mention of the monster, append HP info
+    let isMonsterIntro = false;
+    if (monsterName && monsterMaxHealth && entry.includes(monsterName)) {
+      isMonsterIntro = combatLog.findIndex(e => e.includes(monsterName)) === index;
     }
-    
-    // Check if this is a player action
-    if (entry.includes(playerName)) {
-      playerAction = true;
-      entryWeaponName = weaponName;
-      entryWeaponRarity = weaponRarity;
-    }
-    
-    // Extract damage numbers
-    const damageMatch = entry.match(/(\d+)\s+damage/i);
-    if (damageMatch) {
-      damage = parseInt(damageMatch[1]);
-    }
-    
-    return {
-      text: entry,
-      type,
-      playerAction,
-      damage,
-      weaponName: entryWeaponName,
-      weaponRarity: entryWeaponRarity
-    };
-  };
 
-  // Render a single combat log entry with proper styling
-  const renderEntry = (entry: string, index: number) => {
-    const parsedEntry = parseEntry(entry);
-    
-    // Get base color for the entry type
-    const getEntryColor = (): string => {
-      switch (parsedEntry.type) {
-        case 'critical':
-          return Colors.criticalDamage;
-        case 'miss':
-          return Colors.miss;
-        case 'dodge':
-          return Colors.dodge;
-        case 'victory':
-          return Colors.success;
-        case 'defeat':
-          return Colors.error;
-        case 'info':
-          return Colors.info;
-        case 'header':
-          return Colors.accent;
-        default:
-          return Colors.neutral;
-      }
-    };
-
-    // Split text into parts for coloring
-    const renderColoredText = () => {
-      let text = parsedEntry.text;
-      const parts: React.ReactNode[] = [];
-      let lastIndex = 0;
-
-      // Helper to add text part
-      const addTextPart = (content: string, color: string, bold: boolean = false, key?: string) => {
-        if (content.trim()) {
-          parts.push(
-            <Text key={key || parts.length} style={[styles.logText, { color, fontWeight: bold ? 'bold' : 'normal' }]}>
-              {content}
-            </Text>
-          );
-        }
-      };
-
-      // Color player name
-      const playerIndex = text.indexOf(playerName);
-      if (playerIndex !== -1) {
-        // Text before player name
-        addTextPart(text.substring(0, playerIndex), getEntryColor());
-        
-        // Player name in player color
-        addTextPart(playerName, Colors.player, true, 'player');
-        
-        text = text.substring(playerIndex + playerName.length);
-        lastIndex = 0;
-      }
-
-      // Color weapon names if present
-      if (parsedEntry.weaponName && parsedEntry.weaponRarity) {
-        const weaponColor = ColorUtils.getRarityColor(parsedEntry.weaponRarity);
-        const weaponIndex = text.indexOf(parsedEntry.weaponName);
-        
-        if (weaponIndex !== -1) {
-          // Text before weapon
-          addTextPart(text.substring(lastIndex, weaponIndex), getEntryColor());
-          
-          // Weapon name in rarity color
-          addTextPart(parsedEntry.weaponName, weaponColor, true, 'weapon');
-          
-          lastIndex = weaponIndex + parsedEntry.weaponName.length;
+    // Split on markers and build styled parts
+    const tokens = working.split(/(%%PLAYER%%|%%MAINWEAPON%%|%%OFFHANDWEAPON%%|%%DMG%%|%%DMGEND%%)/);
+    let inDamage = false;
+    tokens.forEach(token => {
+      if (token === '%%PLAYER%%') {
+        pushText(parts, playerName, { color: Colors.player, fontWeight: 'bold' });
+      } else if (token === '%%MAINWEAPON%%') {
+        if (weaponName) pushText(parts, weaponName, { color: Colors[weaponRarity] as string, fontWeight: 'bold' });
+      } else if (token === '%%OFFHANDWEAPON%%') {
+        if (offHandWeaponName) pushText(parts, offHandWeaponName, { color: Colors[offHandWeaponRarity] as string, fontWeight: 'bold' });
+      } else if (token === '%%DMG%%') {
+        inDamage = true;
+      } else if (token === '%%DMGEND%%') {
+        inDamage = false;
+      } else if (token) {
+        if (inDamage) {
+          pushText(parts, token, { color: damageColor, fontWeight: 'bold' });
+        } else {
+          if (/miss|dodge|goes wide/i.test(token)) {
+            pushText(parts, token, { color: /dodge/i.test(token) ? Colors.dodge : Colors.miss });
+          } else {
+            pushText(parts, token, { color: Colors.neutral });
+          }
         }
       }
+    });
 
-      // Color damage numbers
-      if (parsedEntry.damage) {
-        const damagePattern = new RegExp(`\\b${parsedEntry.damage}\\s+damage`, 'i');
-        const damageMatch = text.substring(lastIndex).match(damagePattern);
-        
-        if (damageMatch) {
-          const damageIndex = text.indexOf(damageMatch[0], lastIndex);
-          
-          // Text before damage
-          addTextPart(text.substring(lastIndex, damageIndex), getEntryColor());
-          
-          // Damage number
-          const damageColor = parsedEntry.type === 'critical' ? Colors.criticalDamage : Colors.normalDamage;
-          addTextPart(parsedEntry.damage.toString(), damageColor, true, 'damage');
-          
-          // " damage" text
-          addTextPart(' damage', getEntryColor());
-          
-          lastIndex = damageIndex + damageMatch[0].length;
-        }
-      }
-
-      // Add remaining text
-      if (lastIndex < text.length) {
-        addTextPart(text.substring(lastIndex), getEntryColor());
-      }
-
-      // If no parts were added, add the original text
-      if (parts.length === 0) {
-        addTextPart(text, getEntryColor());
-      }
-
-      return parts;
-    };
+    // Append monster HP info if this is the monster intro
+    if (isMonsterIntro) {
+      parts.push(
+        <Text key="monster-hp" style={{ color: Colors.neutral, fontStyle: 'italic', marginLeft: 4 }}>
+          {` (HP: ${monsterMaxHealth})`}
+        </Text>
+      );
+    }
 
     return (
-      <View key={index} style={styles.logEntry}>
-        <Text style={styles.logText}>
-          {renderColoredText()}
-        </Text>
-      </View>
+      <Text key={index} style={styles.combatLogEntry}>
+        {parts}
+      </Text>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Combat Log</Text>
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
-        nestedScrollEnabled={true}
-        bounces={true}
-        alwaysBounceVertical={false}
-        keyboardShouldPersistTaps="handled"
-        scrollEventThrottle={16}
-        directionalLockEnabled={true}
-        decelerationRate="normal"
-      >
-        {entries.map((entry, index) => renderEntry(entry, index))}
-      </ScrollView>
-    </View>
+    <ScrollView
+      style={[styles.combatLogContainer, { maxHeight }]}
+      showsVerticalScrollIndicator={showScrollIndicator}
+      nestedScrollEnabled={nestedScrollEnabled}
+    >
+      {combatLog.map(renderCombatLogEntry)}
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  combatLogContainer: {
     backgroundColor: Colors.surface,
     borderRadius: 8,
     padding: 12,
-    margin: 8,
-    height: 280, // Fixed height to ensure scrolling works
-    borderWidth: 1,
-    borderColor: Colors.border,
+    marginVertical: 8,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  scrollView: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-
-  },
-  scrollContent: {
-    paddingBottom: 8,
-  },
-  logEntry: {
+  combatLogEntry: {
+    fontSize: 15,
     marginBottom: 4,
-    paddingVertical: 2,
-  },
-  logText: {
-    fontSize: 14,
-    lineHeight: 20,
     color: Colors.neutral,
+    flexWrap: 'wrap',
   },
 }); 

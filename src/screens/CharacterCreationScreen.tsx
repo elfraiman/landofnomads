@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useGame } from '../context/GameContext';
 import { characterClasses } from '../data/classes';
 import { CharacterClass } from '../types';
-import { Colors, ColorUtils, RPGTextStyles } from '../utils/colors';
+import { Colors, ColorUtils } from '../utils/colors';
+import RPGText from '../components/ui/RPGText';
+import { useCustomAlert } from '../components/ui/CustomAlert';
 
 interface CharacterCreationScreenProps {
   onCharacterCreated: () => void;
@@ -14,15 +16,24 @@ const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = ({ onCha
   const [selectedClass, setSelectedClass] = useState<CharacterClass | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { createCharacter } = useGame();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const handleCreateCharacter = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a character name');
+      showAlert(
+        'Name Required',
+        'Every hero needs a name. What shall yours be?',
+        [{ text: 'OK', style: 'default' }]
+      );
       return;
     }
 
     if (!selectedClass) {
-      Alert.alert('Error', 'Please select a character class');
+      showAlert(
+        'Class Required',
+        'Choose your path before beginning your journey.',
+        [{ text: 'OK', style: 'default' }]
+      );
       return;
     }
 
@@ -31,41 +42,27 @@ const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = ({ onCha
       await createCharacter(name.trim(), selectedClass.id);
       onCharacterCreated();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create character');
+      showAlert(
+        'Creation Failed',
+        'The fates have intervened. Please try again.',
+        [{ text: 'Try Again', style: 'default' }]
+      );
     } finally {
       setIsCreating(false);
     }
   };
 
-  const getClassIcon = (classId: string): string => {
-    return '';
-  };
-
-  const getClassColor = (classId: string): string => {
-    return ColorUtils.getClassColor(classId);
-  };
-
-
-  const getStatIcon = (statType: string): string => {
-    return '';
-  };
-
   const getStatColor = (statType: string): string => {
     switch (statType) {
-      case 'strength': return '#E67E5C';
-      case 'dexterity': return '#6AAF6A'; 
-      case 'constitution': return '#C15B5B';
-      case 'intelligence': return '#7FACD4';
-      case 'speed': return '#D4B650';
-      default: return '#8b949e';
+      case 'strength': return Colors.damage;
+      case 'dexterity': return Colors.uncommon;
+      case 'constitution': return Colors.health;
+      case 'intelligence': return Colors.mana;
+      case 'speed': return Colors.stamina;
+      default: return Colors.textSecondary;
     }
   };
 
-  const getGrowthColor = (multiplier: number): string => {
-    if (multiplier >= 1.3) return '#2ea043'; // Green for high growth
-    if (multiplier >= 1.0) return '#FFD700'; // Yellow for normal growth
-    return '#f85149'; // Red for low growth
-  };
 
   const getPlaystyleDescription = (classId: string): string => {
     switch (classId) {
@@ -79,562 +76,319 @@ const CharacterCreationScreen: React.FC<CharacterCreationScreenProps> = ({ onCha
     }
   };
 
+  const getStatDescription = (stat: string): string => {
+    switch (stat) {
+      case 'strength': return 'Physical damage';
+      case 'dexterity': return 'Accuracy and Critical hit chance';
+      case 'constitution': return 'Health points and Defense';
+      case 'intelligence': return 'Magic damage';
+      case 'speed': return 'Action speed and Evasion';
+      default: return '';
+    }
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Your Champion</Text>
-          <Text style={styles.subtitle}>Choose your path to glory and forge your legend!</Text>
-        </View>
-
-        {/* Character Name Input */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Character Name</Text>
-          <View style={styles.nameInputContainer}>
-            <TextInput
-              style={styles.nameInput}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter your hero's name..."
-              placeholderTextColor="#6e7681"
-              maxLength={20}
-            />
-            <Text style={styles.characterCount}>{name.length}/20</Text>
+    <>
+      <ScrollView style={styles.container}>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <RPGText variant="title" style={styles.title}>Forge Your Destiny</RPGText>
+            <RPGText variant="subtitle" style={styles.subtitle}>The path to legend begins with a choice</RPGText>
           </View>
-        </View>
 
-        {/* Class Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Choose Your Class</Text>
-          <Text style={styles.sectionSubtitle}>
-            Each class offers a unique playstyle and strengths
-          </Text>
-
-          <View style={styles.classGrid}>
-            {characterClasses.map((characterClass) => {
-              const classColor = getClassColor(characterClass.id);
-              const isSelected = selectedClass?.id === characterClass.id;
-
-              return (
-                <TouchableOpacity
-                  key={characterClass.id}
-                  style={[
-                    styles.classCard,
-                    {
-                      borderColor: isSelected ? classColor : '#21262d',
-                      backgroundColor: isSelected ? `${classColor}15` : '#161b22',
-                    }
-                  ]}
-                  onPress={() => setSelectedClass(characterClass)}
-                >
-                  {/* Class Header */}
-                  <View style={styles.classHeader}>
-                    <Text style={styles.classIcon}>
-                      {getClassIcon(characterClass.id)}
-                    </Text>
-                    <View style={styles.classNameContainer}>
-                      <Text style={[styles.className, { color: classColor }]}>
-                        {characterClass.name}
-                      </Text>
-                      <Text style={styles.classPlaystyle}>
-                        {getPlaystyleDescription(characterClass.id)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Class Description */}
-                  <Text style={styles.classDescription}>
-                    {characterClass.description}
-                  </Text>
-
-                  {/* Starting Stats */}
-                  <View style={styles.statsContainer}>
-                    <Text style={styles.statsTitle}>Starting Stats</Text>
-                    <View style={styles.statsGrid}>
-                      {Object.entries(characterClass.startingStats).map(([stat, value]) => (
-                        <View key={stat} style={styles.statItem}>
-                          <Text style={styles.statIcon}>
-                            {getStatIcon(stat)}
-                          </Text>
-                          <Text style={styles.statLabel}>
-                            {stat.charAt(0).toUpperCase() + stat.slice(1, 3)}
-                          </Text>
-                          <Text style={[
-                            styles.statValue,
-                            { color: getStatColor(stat) }
-                          ]}>
-                            {value}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-
-                  {/* Primary Stat */}
-                  <View style={styles.primaryStatContainer}>
-                    <Text style={styles.primaryStatLabel}>Primary Stat:</Text>
-                    <Text style={[
-                      styles.primaryStatValue,
-                      { color: getStatColor(characterClass.primaryStat) }
-                    ]}>
-                      {characterClass.primaryStat.toUpperCase()}
-                    </Text>
-                  </View>
-
-                  {/* Selection Indicator */}
-                  {isSelected && (
-                    <View style={[styles.selectedIndicator, { backgroundColor: classColor }]}>
-                      <Text style={styles.selectedText}>✓ SELECTED</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Selected Class Details */}
-        {selectedClass && (
+          {/* Character Name Input */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {selectedClass.name} Overview
-            </Text>
-
-            <View style={[
-              styles.selectedClassDetails,
-              { borderColor: getClassColor(selectedClass.id) }
-            ]}>
-              {/* Class Summary */}
-              <View style={styles.classSummary}>
-                <View style={styles.classOverviewHeader}>
-                  <Text style={styles.selectedClassIcon}>
-                    {getClassIcon(selectedClass.id)}
-                  </Text>
-                  <View>
-                    <Text style={[
-                      styles.selectedClassName,
-                      { color: getClassColor(selectedClass.id) }
-                    ]}>
-                      {selectedClass.name}
-                    </Text>
-                    <Text style={styles.selectedClassPlaystyle}>
-                      {getPlaystyleDescription(selectedClass.id)}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.selectedClassDescription}>
-                  {selectedClass.description}
-                </Text>
-              </View>
-
-              {/* Stat Growth */}
-              <View style={styles.growthSection}>
-                <Text style={styles.growthTitle}>📈 Stat Growth Potential</Text>
-                <Text style={styles.growthSubtitle}>
-                  How well this class develops each stat over time
-                </Text>
-
-                <View style={styles.growthGrid}>
-                  {Object.entries(selectedClass.statGrowth).map(([stat, multiplier]) => (
-                    <View key={stat} style={styles.growthItem}>
-                      <Text style={styles.growthIcon}>
-                        {getStatIcon(stat)}
-                      </Text>
-                      <Text style={styles.growthLabel}>
-                        {stat.charAt(0).toUpperCase() + stat.slice(1)}
-                      </Text>
-                      <View style={styles.growthValueContainer}>
-                        <Text style={[
-                          styles.growthValue,
-                          { color: getGrowthColor(multiplier) }
-                        ]}>
-                          {multiplier}x
-                        </Text>
-                        <Text style={styles.growthIndicator}>
-                          {multiplier >= 1.3 ? 'High' : multiplier >= 1.0 ? 'Normal' : 'Low'}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-              {/* Recommended Builds */}
-              <View style={styles.buildsSection}>
-                <Text style={styles.buildsTitle}>Recommended Builds</Text>
-                {selectedClass.id === 'warrior' && (
-                  <Text style={styles.buildDescription}>
-                    <Text style={styles.buildName}>Tank Build:</Text> Focus on Constitution + Strength{'\n'}
-                    <Text style={styles.buildName}>Damage Build:</Text> Prioritize Strength + some Dexterity
-                  </Text>
-                )}
-                {selectedClass.id === 'rogue' && (
-                  <Text style={styles.buildDescription}>
-                    <Text style={styles.buildName}>Assassin Build:</Text> Max Dexterity for critical hits{'\n'}
-                    <Text style={styles.buildName}>Speed Build:</Text> Balance Dexterity + Speed for first strikes
-                  </Text>
-                )}
-                {selectedClass.id === 'mage' && (
-                  <Text style={styles.buildDescription}>
-                    <Text style={styles.buildName}>Pure Mage:</Text> Max Intelligence for devastating spells{'\n'}
-                    <Text style={styles.buildName}>Battle Mage:</Text> Intelligence + Constitution for survivability
-                  </Text>
-                )}
-                {selectedClass.id === 'paladin' && (
-                  <Text style={styles.buildDescription}>
-                    <Text style={styles.buildName}>Balanced Build:</Text> Even distribution across all stats{'\n'}
-                    <Text style={styles.buildName}>Holy Tank:</Text> Constitution + Strength with some Intelligence
-                  </Text>
-                )}
-                {selectedClass.id === 'berserker' && (
-                  <Text style={styles.buildDescription}>
-                    <Text style={styles.buildName}>Pure Berserker:</Text> All-in on Strength for maximum damage{'\n'}
-                    <Text style={styles.buildName}>Fury Build:</Text> Strength + Speed for devastating combos
-                  </Text>
-                )}
-                {selectedClass.id === 'archer' && (
-                  <Text style={styles.buildDescription}>
-                    <Text style={styles.buildName}>Sniper Build:</Text> Max Dexterity for precision strikes{'\n'}
-                    <Text style={styles.buildName}>Ranger Build:</Text> Dexterity + Speed + some Constitution
-                  </Text>
-                )}
-              </View>
+            <RPGText variant="h2" style={styles.sectionTitle}>Name Your Hero</RPGText>
+            <View style={styles.nameInputContainer}>
+              <TextInput
+                style={styles.nameInput}
+                value={name}
+                onChangeText={setName}
+                placeholder="What shall they call you?"
+                placeholderTextColor={Colors.textMuted}
+                maxLength={20}
+              />
+              <RPGText variant="caption" style={styles.characterCount}>{name.length}/20</RPGText>
             </View>
           </View>
-        )}
 
-        {/* Create Button */}
-        <TouchableOpacity
-          style={[
-            styles.createButton,
-            {
-              backgroundColor: selectedClass ? getClassColor(selectedClass.id) : '#21262d',
-              borderColor: selectedClass ? getClassColor(selectedClass.id) : '#30363d',
-            },
-            (!name.trim() || !selectedClass || isCreating) && styles.disabledButton
-          ]}
-          onPress={handleCreateCharacter}
-          disabled={!name.trim() || !selectedClass || isCreating}
-        >
-          <Text style={[
-            styles.createButtonText,
-            { color: (!name.trim() || !selectedClass || isCreating) ? '#6e7681' : '#fff' }
-          ]}>
-            {isCreating ? 'Creating Hero...' : selectedClass ? `Create ${selectedClass.name}` : 'Choose a Class First'}
-          </Text>
-        </TouchableOpacity>
+          {/* Class Selection */}
+          <View style={styles.section}>
+            <RPGText variant="h2" style={styles.sectionTitle}>Choose Your Path</RPGText>
+            <RPGText variant="subtitle" style={styles.sectionSubtitle}>
+              Your calling awaits
+            </RPGText>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Tip: You can change your build strategy later by distributing stat points manually!
-          </Text>
+            {/* Stats Legend */}
+            <View style={styles.statsLegend}>
+              <RPGText variant="medieval" style={styles.statsLegendTitle}>Combat Attributes</RPGText>
+              {Object.keys(characterClasses[0].startingStats).map((stat) => (
+                <View key={stat} style={styles.legendItem}>
+                  <RPGText variant="caption" style={[styles.legendLabel, { color: getStatColor(stat) }]}>
+                    {stat.charAt(0).toUpperCase() + stat.slice(1, 3)}
+                  </RPGText>
+                  <RPGText variant="caption" style={styles.legendDescription}>
+                    {getStatDescription(stat)}
+                  </RPGText>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.classGrid}>
+              {characterClasses.map((characterClass) => {
+                const classColor = ColorUtils.getClassColor(characterClass.id);
+                const isSelected = selectedClass?.id === characterClass.id;
+
+                return (
+                  <TouchableOpacity
+                    key={characterClass.id}
+                    style={[
+                      styles.classCard,
+                      {
+                        borderColor: isSelected ? classColor : Colors.border,
+                        backgroundColor: isSelected ? ColorUtils.withOpacity(classColor, 0.1) : Colors.surface,
+                      }
+                    ]}
+                    onPress={() => setSelectedClass(characterClass)}
+                  >
+                    {/* Class Header and Description */}
+                    <View style={styles.classHeader}>
+                      <View style={styles.classNameContainer}>
+                        <RPGText variant="h3" style={[styles.className, { color: classColor }]}>
+                          {characterClass.name}
+                        </RPGText>
+                        <RPGText variant="caption" style={styles.classPlaystyle}>
+                          {getPlaystyleDescription(characterClass.id)}
+                        </RPGText>
+                      </View>
+                    </View>
+
+                    {/* Stats in a Row */}
+                    <View style={styles.cardContent}>
+                      {/* Starting Stats */}
+                      <View style={styles.statsContainer}>
+                        <View style={styles.statsGrid}>
+                          {Object.entries(characterClass.startingStats).map(([stat, value]) => (
+                            <View key={stat} style={styles.statItem}>
+                              <RPGText variant="caption" style={[
+                                styles.statLabel,
+                                characterClass.primaryStat === stat && styles.primaryStatLabel
+                              ]}>
+                                {stat.charAt(0).toUpperCase() + stat.slice(1, 3)}
+                              </RPGText>
+                              <RPGText variant="stat" style={[
+                                styles.statValue,
+                                { color: getStatColor(stat) }
+                              ]}>
+                                {value}
+                              </RPGText>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Selection Indicator */}
+                    {isSelected && (
+                      <View style={[styles.selectedIndicator, { backgroundColor: classColor }]}>
+                        <RPGText variant="caption" style={styles.selectedText}>✓</RPGText>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Create Character Button */}
+          <TouchableOpacity
+            style={[
+              styles.createButton,
+              {
+                backgroundColor: selectedClass ? ColorUtils.getClassColor(selectedClass.id) : Colors.disabled,
+                opacity: isCreating ? 0.7 : 1
+              }
+            ]}
+            onPress={handleCreateCharacter}
+            disabled={!selectedClass || !name.trim() || isCreating}
+          >
+            <RPGText variant="medieval" style={styles.createButtonText}>
+              {isCreating ? 'Forging Legend...' : 'Begin Your Saga'}
+            </RPGText>
+          </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+      <AlertComponent />
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0d1117',
+    backgroundColor: Colors.background,
+
   },
   content: {
-    padding: 20,
+    padding: 12,
+    paddingVertical: 26,
   },
-
-  // Header
   header: {
     alignItems: 'center',
-    marginBottom: 32,
-    paddingVertical: 20,
+    marginBottom: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
   title: {
-    ...RPGTextStyles.heroTitle,
-    color: '#f0f6fc',
+    color: Colors.primary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
+    marginTop: 36,
   },
   subtitle: {
-    ...RPGTextStyles.bodyLarge,
-    color: '#8b949e',
+    color: Colors.textSecondary,
     textAlign: 'center',
-    fontStyle: 'italic',
+    fontSize: 16,
   },
-
-  // Sections
   section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    ...RPGTextStyles.h2,
-    color: '#f0f6fc',
-    marginBottom: 8,
-  },
-  sectionSubtitle: {
-    ...RPGTextStyles.body,
-    color: '#8b949e',
     marginBottom: 16,
   },
-
-  // Name Input
+  sectionTitle: {
+    color: Colors.text,
+    marginBottom: 4,
+    fontSize: 18,
+  },
+  sectionSubtitle: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    marginBottom: 12,
+  },
   nameInputContainer: {
-    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 8,
+    marginBottom: 8,
   },
   nameInput: {
-    ...RPGTextStyles.body,
-    backgroundColor: '#21262d',
-    borderWidth: 2,
-    borderColor: '#30363d',
-    borderRadius: 12,
-    padding: 16,
-    color: '#f0f6fc',
-    fontWeight: '500',
+    flex: 1,
+    color: Colors.text,
+    fontSize: 16,
+    fontFamily: 'System',
   },
   characterCount: {
-    ...RPGTextStyles.caption,
-    position: 'absolute',
-    right: 16,
-    top: 16,
-    color: '#6e7681',
+    color: Colors.textMuted,
+    marginLeft: 8,
   },
-
-  // Class Grid
   classGrid: {
-    gap: 16,
+    gap: 8,
   },
   classCard: {
-    backgroundColor: '#161b22',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 2,
-    position: 'relative',
+    borderRadius: 6,
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 8,
   },
   classHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  classIcon: {
-    ...RPGTextStyles.statLarge,
-    marginRight: 12,
+    marginBottom: 6,
   },
   classNameContainer: {
     flex: 1,
   },
   className: {
-    ...RPGTextStyles.h3,
     marginBottom: 2,
+    fontSize: 16,
   },
   classPlaystyle: {
-    ...RPGTextStyles.caption,
-    color: '#8b949e',
-    fontStyle: 'italic',
+    color: Colors.textSecondary,
+    fontSize: 11,
   },
-  classDescription: {
-    ...RPGTextStyles.bodySmall,
-    color: '#8b949e',
-    lineHeight: 20,
-    marginBottom: 16,
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-
-  // Stats
   statsContainer: {
-    marginBottom: 12,
-  },
-  statsTitle: {
-    ...RPGTextStyles.label,
-    color: '#f0f6fc',
-    marginBottom: 8,
+    flex: 1,
   },
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 4,
   },
   statItem: {
     alignItems: 'center',
-    flex: 1,
-  },
-  statIcon: {
-    ...RPGTextStyles.body,
-    marginBottom: 2,
+    width: '18%',
   },
   statLabel: {
-    ...RPGTextStyles.caption,
-    color: '#8b949e',
+    color: Colors.textMuted,
     marginBottom: 2,
-  },
-  statValue: {
-    ...RPGTextStyles.stat,
-  },
-
-  // Primary Stat
-  primaryStatContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0d1117',
-    borderRadius: 8,
-    padding: 8,
+    fontSize: 10,
+    textAlign: 'center',
   },
   primaryStatLabel: {
-    ...RPGTextStyles.caption,
-    color: '#8b949e',
-    marginRight: 6,
-  },
-  primaryStatValue: {
-    ...RPGTextStyles.caption,
+    color: Colors.primary,
     fontWeight: '700',
   },
-
-  // Selection Indicator
+  statValue: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
   selectedIndicator: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 8,
+    right: 8,
     borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectedText: {
-    ...RPGTextStyles.caption,
-    fontWeight: '700',
-    color: '#fff',
+    color: Colors.text,
+    fontSize: 14,
   },
-
-  // Selected Class Details
-  selectedClassDetails: {
-    backgroundColor: '#161b22',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 2,
-  },
-  classSummary: {
-    marginBottom: 20,
-  },
-  classOverviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  selectedClassIcon: {
-    ...RPGTextStyles.statLarge,
-    fontSize: 40,
-    marginRight: 16,
-  },
-  selectedClassName: {
-    ...RPGTextStyles.h1,
-    marginBottom: 4,
-  },
-  selectedClassPlaystyle: {
-    ...RPGTextStyles.body,
-    color: '#8b949e',
-    fontStyle: 'italic',
-  },
-  selectedClassDescription: {
-    ...RPGTextStyles.body,
-    color: '#8b949e',
-    lineHeight: 20,
-  },
-
-  // Growth Section
-  growthSection: {
-    marginBottom: 20,
-  },
-  growthTitle: {
-    ...RPGTextStyles.body,
-    fontWeight: '700',
-    color: '#f0f6fc',
-    marginBottom: 4,
-  },
-  growthSubtitle: {
-    ...RPGTextStyles.caption,
-    color: '#8b949e',
-    marginBottom: 12,
-  },
-  growthGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  growthItem: {
-    backgroundColor: '#0d1117',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    flex: 1,
-    minWidth: '30%',
-  },
-  growthIcon: {
-    ...RPGTextStyles.body,
-    marginBottom: 4,
-  },
-  growthLabel: {
-    ...RPGTextStyles.caption,
-    color: '#8b949e',
-    marginBottom: 4,
-  },
-  growthValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  growthValue: {
-    ...RPGTextStyles.label,
-    fontWeight: '700',
-  },
-  growthIndicator: {
-    ...RPGTextStyles.caption,
-  },
-
-  // Builds Section
-  buildsSection: {},
-  buildsTitle: {
-    ...RPGTextStyles.body,
-    fontWeight: '700',
-    color: '#f0f6fc',
-    marginBottom: 8,
-  },
-  buildDescription: {
-    ...RPGTextStyles.bodySmall,
-    color: '#8b949e',
-    lineHeight: 20,
-  },
-  buildName: {
-    ...RPGTextStyles.bodySmall,
-    fontWeight: '700',
-    color: '#f0f6fc',
-  },
-
-  // Create Button
   createButton: {
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 16,
     alignItems: 'center',
-    borderWidth: 2,
-    marginBottom: 20,
-  },
-  disabledButton: {
-    backgroundColor: '#21262d !important',
-    borderColor: '#30363d !important',
+    marginTop: 20,
   },
   createButtonText: {
-    ...RPGTextStyles.button,
+    color: Colors.text,
+    fontSize: 18,
   },
-
-  // Footer
-  footer: {
+  statsLegend: {
+    backgroundColor: ColorUtils.withOpacity(Colors.surface, 0.5),
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 12,
+  },
+  legendItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 20,
+    marginBottom: 4,
   },
-  footerText: {
-    ...RPGTextStyles.caption,
-    color: '#6e7681',
-    textAlign: 'center',
-    fontStyle: 'italic',
+  legendLabel: {
+    width: 30,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  legendDescription: {
+    flex: 1,
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  statsLegendTitle: {
+    color: Colors.primary,
+    marginBottom: 6,
+    fontSize: 12,
   },
 });
 

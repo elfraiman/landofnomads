@@ -3,19 +3,17 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Dimensions
 import { useGame } from '../context/GameContext';
 import { Colors, ColorUtils, RPGTextStyles } from '../utils/colors';
 import CharacterStatsTab from '../components/character/CharacterStatsTab';
-import TrainingTab from '../components/character/TrainingTab';
 import CombatTab from '../components/combat/CombatTab';
 import EquipmentTab from '../components/character/EquipmentTab';
 import InventoryTab from '../components/character/InventoryTab';
 import { GemTab } from '../components/character/GemTab';
-
 import { WildernessTab } from '../components/wilderness/WildernessTab';
 import LevelUpModal from '../components/character/LevelUpModal';
 import { NotificationSystem } from '../components/ui/NotificationSystem';
 
 const { width } = Dimensions.get('window');
 
-type TabType = 'stats' | 'training' | 'combat' | 'equipment' | 'inventory' | 'gems' | 'wilderness';
+type TabType = 'stats' | 'combat' | 'equipment' | 'inventory' | 'gems' | 'wilderness';
 
 interface Tab {
   id: TabType;
@@ -34,13 +32,12 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
 
   // Tab configuration for easy management
   const tabs: Tab[] = [
-    { id: 'stats' as TabType, label: 'Stats', emoji: '' },
-    { id: 'training' as TabType, label: 'Training', emoji: '' },
-    { id: 'combat' as TabType, label: 'Combat', emoji: '' },
-    { id: 'equipment' as TabType, label: 'Equipment', emoji: '' },
-    { id: 'inventory' as TabType, label: 'Inventory', emoji: '' },
-    { id: 'gems' as TabType, label: 'Gems', emoji: '' },
-    { id: 'wilderness' as TabType, label: 'Wilderness', emoji: '' },
+    { id: 'stats', label: 'Stats', emoji: '' },
+    { id: 'combat', label: 'Combat', emoji: '' },
+    { id: 'equipment', label: 'Equipment', emoji: '' },
+    { id: 'inventory', label: 'Inventory', emoji: '' },
+    { id: 'gems', label: 'Gems', emoji: '' },
+    { id: 'wilderness', label: 'Wilderness', emoji: '' },
   ];
 
   useEffect(() => {
@@ -73,8 +70,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
     switch (activeTab) {
       case 'stats':
         return <CharacterStatsTab character={currentCharacter} />;
-      case 'training':
-        return <TrainingTab character={currentCharacter} />;
       case 'combat':
         return <CombatTab character={currentCharacter} />;
       case 'equipment':
@@ -92,7 +87,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
 
   return (
     <View style={styles.container}>
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.characterInfo}>
@@ -126,6 +121,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
             </View>
           )}
         </View>
+
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={[styles.logoutButton, { backgroundColor: Colors.success, marginRight: 10 }]}

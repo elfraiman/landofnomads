@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Character, GameState, StatType, TrainingResult, CombatResult, Item, ItemType, WildernessState, PlayerPosition, SpawnedMonster, DetailedBattleResult } from '../types';
+import { Character, GameState, StatType, CombatResult, Item, ItemType, WildernessState, PlayerPosition, SpawnedMonster, DetailedBattleResult } from '../types';
 import { WildernessMonster, LootDrop } from '../types/wilderness';
 import { characterClasses } from '../data/classes';
 import { generateStarterEquipment, baseItems, generateItem } from '../data/items';
@@ -18,11 +18,6 @@ interface GameContextType {
   selectCharacter: (characterId: string) => void;
   deleteCharacter: (characterId: string) => Promise<void>;
   updateCharacter: (character: Character) => void;
-
-  // Training system
-  trainStat: (statType: StatType) => Promise<TrainingResult>;
-  canTrain: (statType: StatType) => boolean;
-  getTrainingCost: (statType: StatType) => { energy: number; gold: number };
 
   // Combat system
   startBattle: (targetId?: string) => Promise<CombatResult>;
@@ -197,13 +192,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         inventory: [], // Start with empty inventory
         wins: 0,
         losses: 0,
-        lastTraining: {
-          strength: 0,
-          dexterity: 0,
-          constitution: 0,
-          intelligence: 0,
-          speed: 0
-        },
         activeGemEffects: [], // Start with no gem effects
         createdAt: Date.now(),
         lastActive: Date.now()
@@ -252,92 +240,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   };
 
-  const getTrainingCost = (statType: StatType) => {
-    if (!gameState.currentCharacter) return { energy: 0, gold: 0 };
-
-    const character = gameState.currentCharacter;
-    const currentStatValue = character.stats[statType];
-    const baseEnergyCost = 20;
-    const baseGoldCost = 50;
-
-    // Cost increases with stat level
-    const energyCost = Math.floor(baseEnergyCost * (1 + currentStatValue * 0.1));
-    const goldCost = Math.floor(baseGoldCost * (1 + currentStatValue * 0.05));
-
-    return { energy: energyCost, gold: goldCost };
-  };
-
-  const canTrain = (statType: StatType): boolean => {
-    if (!gameState.currentCharacter) return false;
-
-    const character = gameState.currentCharacter;
-    const cost = getTrainingCost(statType);
-    const cooldownTime = 30 * 60 * 1000; // 30 minutes
-    const lastTrainingTime = character.lastTraining[statType];
-    const now = Date.now();
-
-    return (
-      character.currentHealth > 0 && // Cannot train when dead
-      character.energy >= cost.energy &&
-      character.gold >= cost.gold &&
-      (now - lastTrainingTime) >= cooldownTime
-    );
-  };
-
-  const trainStat = async (statType: StatType): Promise<TrainingResult> => {
-    if (!gameState.currentCharacter || !canTrain(statType)) {
-      throw new Error('Cannot train this stat right now');
-    }
-
-    const character = gameState.currentCharacter;
-    const cost = getTrainingCost(statType);
-    const oldValue = character.stats[statType];
-
-    // Training success rate (95% base, reduced by stat level)
-    const successRate = Math.max(50, 95 - (oldValue * 2));
-    const success = Math.random() * 100 < successRate;
-
-    // Critical success (10% chance on success)
-    const criticalSuccess = success && Math.random() * 100 < 10;
-
-    let statGain = 0;
-    if (success) {
-      statGain = criticalSuccess ? 2 : 1;
-    }
-
-    const newValue = oldValue + statGain;
-
-    // Update character
-    const updatedCharacter = {
-      ...character,
-      stats: { ...character.stats, [statType]: newValue },
-      energy: character.energy - cost.energy,
-      gold: character.gold - cost.gold,
-      lastTraining: { ...character.lastTraining, [statType]: Date.now() }
-    };
-
-    setGameState(prev => ({
-      ...prev,
-      currentCharacter: updatedCharacter,
-      characters: prev.characters.map(c =>
-        c.id === character.id ? updatedCharacter : c
-      )
-    }));
-
-    const result: TrainingResult = {
-      statType,
-      oldValue,
-      newValue,
-      energyCost: cost.energy,
-      goldCost: cost.gold,
-      success,
-      criticalSuccess
-    };
-
-    await saveGame();
-    return result;
-  };
-
   const startBattle = async (targetId?: string): Promise<CombatResult> => {
     if (!gameState.currentCharacter) {
       throw new Error('No character selected');
@@ -366,6 +268,38 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       wins: gameState.currentCharacter.wins + (isWinner ? 1 : 0),
       losses: gameState.currentCharacter.losses + (isWinner ? 0 : 1)
     };
+
+    // Add loot drops to inventory if player won
+    if (isWinner && combatResult.lootDrops.length > 0) {
+      updatedCharacter.inventory = [...updatedCharacter.inventory, ...combatResult.lootDrops];
+
+      // Show notifications for dropped items
+      combatResult.lootDrops.forEach(item => {
+        // Show special notification for gem drops
+        if (item.type === 'gem') {
+          const gem = item as any; // Gem type
+          addNotification({
+            type: 'gem_drop',
+            title: 'Rare Gem Found!',
+            message: `${opponent.name} dropped a ${gem.name}! This valuable gem can boost your stats or be fused with others for greater power.`,
+            duration: 5000
+          });
+        } else {
+          // Show notification for regular item drop
+          addNotification({
+            type: 'item_drop',
+            title: 'Item Found!',
+            message: `${opponent.name} dropped an item!`,
+            itemDetails: {
+              name: item.name,
+              level: item.level,
+              rarity: item.rarity
+            },
+            duration: 3000
+          });
+        }
+      });
+    }
 
     setGameState(prev => ({
       ...prev,
@@ -652,7 +586,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!gameState.currentCharacter) return false;
 
     const character = gameState.currentCharacter;
-
+    
     // Check if player has enough gold
     if (character.gold < item.price) {
       return false;
@@ -1094,7 +1028,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: battleStartTime,
         battleDuration: Date.now() - battleStartTime,
         weaponName: 'fists',
-        weaponRarity: 'common'
+        weaponRarity: 'common',
+        offHandWeaponName: undefined,
+        offHandWeaponRarity: undefined,
+        monsterName: spawnedMonster?.monster?.name,
+        monsterMaxHealth: spawnedMonster?.monster?.baseStats?.health,
       };
     }
 
@@ -1131,7 +1069,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: battleStartTime,
         battleDuration: Date.now() - battleStartTime,
         weaponName: 'fists',
-        weaponRarity: 'common'
+        weaponRarity: 'common',
+        offHandWeaponName: undefined,
+        offHandWeaponRarity: undefined,
+        monsterName: spawnedMonster?.monster?.name,
+        monsterMaxHealth: spawnedMonster?.monster?.baseStats?.health,
       };
     }
 
@@ -1192,13 +1134,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         inventory: [],
         wins: 0,
         losses: 0,
-        lastTraining: {
-          strength: 0,
-          dexterity: 0,
-          constitution: 0,
-          intelligence: 0,
-          speed: 0
-        },
         activeGemEffects: [], // Monsters don't have gem effects
         createdAt: Date.now(),
         lastActive: Date.now()
@@ -1273,17 +1208,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           } else {
             console.log(`Item Drop - Regular item dropped: ${item.name} (${item.type})`);
             // Show notification for regular item drop
-            addNotification({
-              type: 'item_drop',
-              title: 'Item Found!',
-              message: `${spawnedMonster.monster.name} dropped an item!`,
-              itemDetails: {
-                name: item.name,
-                level: item.level,
-                rarity: item.rarity
-              },
-              duration: 3000
-            });
+          addNotification({
+            type: 'item_drop',
+            title: 'Item Found!',
+            message: `${spawnedMonster.monster.name} dropped an item!`,
+            itemDetails: {
+              name: item.name,
+              level: item.level,
+              rarity: item.rarity
+            },
+            duration: 3000
+          });
           }
         });
 
@@ -1394,7 +1329,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: battleStartTime,
         battleDuration: Date.now() - battleStartTime,
         weaponName: character.equipment.mainHand?.name || 'fists',
-        weaponRarity: character.equipment.mainHand?.rarity || 'common'
+        weaponRarity: character.equipment.mainHand?.rarity || 'common',
+        offHandWeaponName: character.equipment.offHand?.type === 'weapon' ? character.equipment.offHand?.name : undefined,
+        offHandWeaponRarity: character.equipment.offHand?.type === 'weapon' ? character.equipment.offHand?.rarity : undefined,
+        monsterName: spawnedMonster.monster.name,
+        monsterMaxHealth: monsterMaxHealth,
       };
     } catch (error) {
       console.error('Combat error:', error);
@@ -1411,7 +1350,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: battleStartTime,
         battleDuration: Date.now() - battleStartTime,
         weaponName: character.equipment.mainHand?.name || 'fists',
-        weaponRarity: character.equipment.mainHand?.rarity || 'common'
+        weaponRarity: character.equipment.mainHand?.rarity || 'common',
+        offHandWeaponName: undefined,
+        offHandWeaponRarity: undefined,
+        monsterName: spawnedMonster?.monster?.name,
+        monsterMaxHealth: spawnedMonster?.monster?.baseStats?.health,
       };
     }
   };
@@ -1433,7 +1376,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: battleStartTime,
         battleDuration: Date.now() - battleStartTime,
         weaponName: 'fists',
-        weaponRarity: 'common'
+        weaponRarity: 'common',
+        offHandWeaponName: undefined,
+        offHandWeaponRarity: undefined
       };
     }
 
@@ -1466,7 +1411,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: battleStartTime,
         battleDuration: Date.now() - battleStartTime,
         weaponName: character.equipment.mainHand?.name || 'fists',
-        weaponRarity: character.equipment.mainHand?.rarity || 'common'
+        weaponRarity: character.equipment.mainHand?.rarity || 'common',
+        offHandWeaponName: undefined,
+        offHandWeaponRarity: undefined
       };
     }
 
@@ -1485,7 +1432,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timestamp: battleStartTime,
         battleDuration: Date.now() - battleStartTime,
         weaponName: character.equipment.mainHand?.name || 'fists',
-        weaponRarity: character.equipment.mainHand?.rarity || 'common'
+        weaponRarity: character.equipment.mainHand?.rarity || 'common',
+        offHandWeaponName: undefined,
+        offHandWeaponRarity: undefined
       };
     }
 
@@ -1600,7 +1549,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       timestamp: battleStartTime,
       battleDuration: Date.now() - battleStartTime,
       weaponName: character.equipment.mainHand?.name || 'fists',
-      weaponRarity: character.equipment.mainHand?.rarity || 'common'
+      weaponRarity: character.equipment.mainHand?.rarity || 'common',
+      offHandWeaponName: undefined,
+      offHandWeaponRarity: undefined
     };
   };
 
@@ -1777,7 +1728,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return [];
       }
       
-      return mapConfigs;
+    return mapConfigs;
     } catch (error) {
       console.error('Error in getAvailableMaps:', error);
       return [];
@@ -1962,9 +1913,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     selectCharacter,
     deleteCharacter,
     updateCharacter,
-    trainStat,
-    canTrain,
-    getTrainingCost,
     startBattle,
     getBattleHistory,
     equipItem,

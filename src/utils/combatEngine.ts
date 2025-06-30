@@ -1,4 +1,10 @@
-import { Character, CombatResult, CombatRound, CombatStats, CombatAction, CharacterStats, ActiveGemEffect } from '../types';
+import { Character, CombatResult, CombatRound, CombatStats, CombatAction, CharacterStats, ActiveGemEffect, CharacterClass, Item, ItemRarity } from '../types';
+import { baseItems, generateItem } from '../data/items';
+
+// Helper function to generate unique IDs
+const generateId = (): string => {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+};
 
 // Combat weapon attack information
 interface WeaponAttack {
@@ -161,14 +167,14 @@ export const calculateCombatStats = (character: Character): CombatStats => {
 
   if (weaponConfig.attacks.length > 1) {
     // Dual-wielding bonuses
-    dualWieldBonus = weaponConfig.attacks.reduce((sum, attack) => sum + attack.damage, 0);
+    dualWieldBonus = Math.floor(weaponConfig.attacks.reduce((sum, attack) => sum + attack.damage, 0) * 0.7);
     weaponSpeedModifier = Math.floor(weaponConfig.attacks.reduce((sum, attack) => sum + attack.speed, 0) / weaponConfig.attacks.length * 1.1);
     criticalChance += 3; // Dual-wield crit bonus
   } else if (weaponConfig.attacks.length === 1) {
     const weapon = weaponConfig.attacks[0].weapon;
     if (weapon && weapon.handedness === 'two-handed') {
-      // Two-handed weapons get damage bonus but are slower
-      weaponDamage = Math.floor(weaponDamage * 1.2);
+      // Two-handed weapons get slight bonus but dampened by overall scaling
+      weaponDamage = Math.floor(weaponDamage * 0.9);
       weaponSpeedModifier = Math.floor((weaponConfig.attacks[0].speed || 5) * 0.85);
     } else {
       weaponSpeedModifier = weaponConfig.attacks[0].speed || 5;
@@ -187,113 +193,128 @@ export const calculateCombatStats = (character: Character): CombatStats => {
   // BALANCED DAMAGE CALCULATION FOR LEVEL 1-99 PROGRESSION
   // Reduced multipliers to work with new stat point economy
   
-  // Primary damage from strength (reduced from 0.15 to 0.08)
-  const strengthDamage = Math.floor(effectiveStats.strength * 0.08);
+  // "Stat damage" is the portion of damage that comes purely from character stats (STR/INT, level, etc.)
+  // and global modifiers like magicDamageBonus. Weapon damage will be added per-attack later.
+  let statDamage = 0;
+  let magicDamageBonus = 0;
+
+  // Check if using a magic weapon
+  const isMagicWeapon = weaponConfig.attacks.some(attack => attack.weapon?.isMagicWeapon);
   
-  // Weapon damage is the main source (unchanged)
-  let baseDamage = strengthDamage + weaponDamage + dualWieldBonus;
+  if (isMagicWeapon) {
+    // Magic weapons scale with intelligence
+    const intelligenceDamage = Math.floor(effectiveStats.intelligence * 0.05); // Further reduced scaling for INT
+    statDamage = intelligenceDamage;
 
-  // Intelligence provides minimal damage bonus (reduced from 0.05 to 0.03)
-  const intelligenceDamage = Math.floor(effectiveStats.intelligence * 0.03);
-  baseDamage += intelligenceDamage;
-
-  // Level provides very small scaling (unchanged - already conservative)
-  const levelDamage = Math.floor(level * 0.2);
-  baseDamage += levelDamage;
-
-  // BALANCED ACCURACY CALCULATION
-  // Reduced scaling to work with new stat system
-  const dexterityAccuracy = Math.floor(Math.sqrt(effectiveStats.dexterity * 15)); // Reduced from 25 to 15
-  const accuracy = Math.min(95, Math.max(15, 75 + dexterityAccuracy + accuracyBonus));
-
-  // BALANCED DODGE CALCULATION  
-  // Reduced scaling for new stat system
-  const dexterityDodge = Math.floor(Math.sqrt(effectiveStats.dexterity * 6)); // Reduced from 8 to 6
-  const dodge = Math.min(35, Math.max(0, dexterityDodge + dodgeChance));
-
-  // BALANCED CRITICAL CHANCE CALCULATION
-  // Reduced scaling for new stat system
-  const dexterityCrit = Math.floor(Math.sqrt(effectiveStats.dexterity * 3)); // Reduced from 4 to 3
-  const critical = Math.min(25, Math.max(2, 2 + dexterityCrit + criticalChance));
-
-  // BALANCED SPEED CALCULATION FOR LEVEL 1-99 PROGRESSION
-  // Reduced multipliers to work with new stat point economy
-  let speed = Math.floor(effectiveStats.speed * 0.8); // Reduced from 1.0 to 0.8
-  
-  // Level provides speed scaling (unchanged - already conservative)
-  speed += Math.floor(level * 0.5);
-  
-  // Dexterity provides speed bonus (reduced from 0.33 to 0.2)
-  speed += Math.floor(effectiveStats.dexterity * 0.2);
-  
-  // Weapon speed modifiers (higher weapon speed = faster turns)
-  if (weaponConfig.attacks.length > 1) {
-    // Dual-wielding: Average weapon speeds with slight bonus
-    const avgWeaponSpeed = weaponConfig.attacks.reduce((sum, attack) => sum + attack.speed, 0) / weaponConfig.attacks.length;
-    speed += Math.floor(avgWeaponSpeed * 0.8); // 80% of weapon speed bonus
-  } else if (weaponConfig.attacks.length === 1) {
-    const weapon = weaponConfig.attacks[0].weapon;
-    if (weapon && weapon.handedness === 'two-handed') {
-      // Two-handed weapons: Slower but more powerful
-      speed += Math.floor((weaponConfig.attacks[0].speed || 5) * 0.6); // 60% of weapon speed
-    } else {
-      // One-handed weapons: Full weapon speed bonus
-      speed += Math.floor((weaponConfig.attacks[0].speed || 5) * 1.0);
+    // Add magic damage bonus from offhand book if present (applies to every spell cast)
+    if (character.equipment.offHand?.magicDamageBonus) {
+      magicDamageBonus = character.equipment.offHand.magicDamageBonus;
+      statDamage += magicDamageBonus;
     }
+  } else {
+    // Physical weapons scale with strength
+    const strengthDamage = Math.floor(effectiveStats.strength * 0.03);
+    statDamage = strengthDamage;
   }
-  
-  // Shield penalty: Shields reduce speed significantly
-  if (weaponConfig.hasShield) {
-    const { offHand } = equipment;
-    if (offHand && offHand.weaponSpeed && offHand.weaponSpeed < 0) {
-      speed += offHand.weaponSpeed; // weaponSpeed is negative for shields (penalty)
-    } else {
-      speed -= 2; // Default shield penalty if not specified
-    }
-  }
-  
-  // Ensure minimum speed
-  speed = Math.max(1, speed);
 
-  // BALANCED ARMOR CALCULATION
-  // Reduced constitution armor scaling for new stat system
-  const constitutionArmor = Math.floor(Math.sqrt(effectiveStats.constitution * 8)); // Reduced from 10 to 8
-  const totalArmor = armor + constitutionArmor;
+  // Apply level scaling
+  const levelScaling = Math.floor(level * 0.2);
+  statDamage += levelScaling;
+
+  // Calculate final damage range (80% - 120% of base damage)
+  const minDamage = Math.floor(statDamage * 0.8);
+  const maxDamage = Math.floor(statDamage * 1.2);
+
+  // Calculate critical hit chance
+  // Base crit chance from equipment
+  let finalCriticalChance = criticalChance;
+  
+  // Add dexterity bonus to crit chance
+  const dexterityCritBonus = Math.floor(effectiveStats.dexterity * 0.2);
+  finalCriticalChance += dexterityCritBonus;
+
+  // Magic weapons get intelligence bonus to crit chance
+  if (isMagicWeapon) {
+    const intelligenceCritBonus = Math.floor(effectiveStats.intelligence * 0.15);
+    finalCriticalChance += intelligenceCritBonus;
+  }
+
+  // Cap crit chance at 75%
+  finalCriticalChance = Math.min(finalCriticalChance, 75);
+
+  // Calculate dodge chance
+  const baseDodgeChance = dodgeChance || 0;
+  const speedDodgeBonus = Math.floor(effectiveStats.speed * 0.3);
+  const dexterityDodgeBonus = Math.floor(effectiveStats.dexterity * 0.2);
+  let finalDodgeChance = baseDodgeChance + speedDodgeBonus + dexterityDodgeBonus;
+
+  // Cap dodge at 60%
+  finalDodgeChance = Math.min(finalDodgeChance, 60);
+
+  // Calculate accuracy
+  const baseAccuracy = 85; // Base 85% accuracy
+  const dexterityAccuracyBonus = Math.floor(effectiveStats.dexterity * 0.3);
+  let finalAccuracy = baseAccuracy + dexterityAccuracyBonus + accuracyBonus;
+
+  // Magic weapons get intelligence bonus to accuracy
+  if (isMagicWeapon) {
+    const intelligenceAccuracyBonus = Math.floor(effectiveStats.intelligence * 0.2);
+    finalAccuracy += intelligenceAccuracyBonus;
+  }
+
+  // Cap accuracy at 95%
+  finalAccuracy = Math.min(finalAccuracy, 95);
+
+  // Apply global weapon damage scaling to tone down weapon power
+  weaponDamage = Math.floor(weaponDamage * 0.7);
 
   return {
     health,
     maxHealth,
-    damage: Math.max(3, baseDamage), // Minimum 3 damage (like RuneScape)
-    armor: Math.max(0, totalArmor),
-    accuracy: accuracy,
-    dodge: dodge,
-    criticalChance: critical,
-    speed: Math.max(1, speed)
+    damage: statDamage,
+    minDamage,
+    maxDamage,
+    armor,
+    accuracy: finalAccuracy,
+    dodge: finalDodgeChance,
+    criticalChance: finalCriticalChance,
+    speed: effectiveStats.speed,
+    isMagicWeapon,
+    magicDamageBonus
   };
 };
 
 // IMPROVED DAMAGE CALCULATION with shield blocking
-const calculateDamage = (baseDamage: number, armor: number, hasShield: boolean, shieldBlockChance: number, shieldBlockAmount: number): { damage: number; wasBlocked: boolean } => {
-  // Add damage variance (±12% for more consistent combat)
-  const variance = 0.88 + (Math.random() * 0.24); // 0.88 to 1.12
-  let variableDamage = Math.floor(baseDamage * variance);
-
-  // Check for shield block first
-  let wasBlocked = false;
-  if (hasShield && Math.random() * 100 < shieldBlockChance) {
-    wasBlocked = true;
-    variableDamage = Math.max(0, variableDamage - shieldBlockAmount);
+const calculateDamage = (
+  baseDamage: number,
+  minDamage: number,
+  maxDamage: number,
+  armor: number,
+  defenderHasShield: boolean,
+  defenderShieldBlockChance: number,
+  defenderShieldBlockAmount: number,
+  isMagicWeapon: boolean
+): { damage: number; wasBlocked: boolean } => {
+  // Check for shield block first (defender's shield blocks incoming damage)
+  if (defenderHasShield && Math.random() * 100 < defenderShieldBlockChance) {
+    const blockedDamage = Math.max(0, baseDamage - defenderShieldBlockAmount);
+    return { damage: blockedDamage, wasBlocked: true };
   }
 
-  // Then apply armor reduction
-  const armorEffectiveness = armor / (armor + 12 * Math.sqrt(armor));
-  const damageReduction = Math.min(0.75, armorEffectiveness); // Cap at 75% reduction
-  const finalDamage = Math.floor(variableDamage * (1 - damageReduction));
+  // Calculate random damage within range
+  const rawDamage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
 
-  return { 
-    damage: Math.max(1, finalDamage), // Minimum 1 damage after armor/blocking
-    wasBlocked 
-  };
+  // Magic weapons ignore a portion of armor
+  let effectiveArmor = armor;
+  if (isMagicWeapon) {
+    effectiveArmor = Math.floor(armor * 0.7); // Magic weapons ignore 30% of armor
+  }
+
+  // Apply armor reduction
+  const damageReduction = Math.min(0.75, effectiveArmor / 100); // Cap damage reduction at 75%
+  const finalDamage = Math.max(1, Math.floor(rawDamage * (1 - damageReduction)));
+
+  return { damage: finalDamage, wasBlocked: false };
 };
 
 // IMPROVED HIT CALCULATION with better accuracy vs dodge interaction
@@ -321,24 +342,42 @@ const generateCombatDescription = (
   damage: number,
   isCritical: boolean,
   weaponName: string,
-  wasBlocked: boolean = false
+  wasBlocked: boolean = false,
+  isMagicWeapon: boolean = false
 ): string => {
   const attackerName = attacker.name;
   const defenderName = defender.name;
 
-  let blockText = wasBlocked ? ' (partially blocked by shield)' : '';
+  // Get weapon display name
+  const displayWeapon = weaponName || 'weapon';
 
   switch (action) {
-    case 'dodge':
-      return `${defenderName} nimbly dodges ${attackerName}'s ${weaponName}!`;
     case 'miss':
-      return `${attackerName} swings their ${weaponName} at ${defenderName} but the attack goes wide!`;
+      return `${attackerName} misses their attack with ${displayWeapon}!`;
+    case 'dodge':
+      return `${defenderName} dodges ${attackerName}'s attack!`;
     case 'critical':
-      return `${attackerName} finds an opening and delivers a DEVASTATING CRITICAL HIT with their ${weaponName} to ${defenderName} for ${damage} damage${blockText}!`;
+      if (isMagicWeapon) {
+        return wasBlocked
+          ? `${attackerName} casts a powerful spell with their ${displayWeapon}, but ${defenderName}'s shield partially blocks it for ${damage} damage!`
+          : `${attackerName} casts a devastating spell with their ${displayWeapon} for ${damage} critical damage!`;
+      } else {
+        return wasBlocked
+          ? `${attackerName} lands a critical hit with their ${displayWeapon}, but ${defenderName}'s shield reduces it to ${damage} damage!`
+          : `${attackerName} lands a critical hit with their ${displayWeapon} for ${damage} damage!`;
+      }
     case 'attack':
-      return `${attackerName} strikes with their ${weaponName} at ${defenderName} for ${damage} damage${blockText}.`;
+      if (isMagicWeapon) {
+        return wasBlocked
+          ? `${attackerName} casts a spell with their ${displayWeapon}, but ${defenderName}'s shield partially blocks it for ${damage} damage!`
+          : `${attackerName} casts a spell with their ${displayWeapon} for ${damage} damage!`;
+      } else {
+        return wasBlocked
+          ? `${attackerName} strikes with their ${displayWeapon}, but ${defenderName}'s shield reduces it to ${damage} damage!`
+          : `${attackerName} strikes with their ${displayWeapon} for ${damage} damage!`;
+      }
     default:
-      return `${attackerName} attacks ${defenderName} with their ${weaponName}.`;
+      return `${attackerName} attacks ${defenderName} for ${damage} damage.`;
   }
 };
 
@@ -350,85 +389,85 @@ const executeCombatRound = (
   attackerStats: CombatStats,
   defenderStats: CombatStats
 ): CombatRound[] => {
-  const attackerHealthBefore = attackerStats.health;
-  const defenderHealthBefore = defenderStats.health;
-
   const rounds: CombatRound[] = [];
-  const attackerConfig = getWeaponConfiguration(attacker);
-  const defenderConfig = getWeaponConfiguration(defender);
+  const attackerWeaponConfig = getWeaponConfiguration(attacker);
+  const defenderWeaponConfig = getWeaponConfiguration(defender);
 
-  let totalDamage = 0;
-  let anyHit = false;
-  let anyCritical = false;
+  // Process each attack in the weapon configuration
+  for (const attack of attackerWeaponConfig.attacks) {
+    // Check if attack hits
+    if (!checkHit(attackerStats.accuracy, defenderStats.dodge)) {
+      rounds.push({
+        roundNumber,
+        attacker,
+        defender,
+        action: 'miss',
+        damage: 0,
+        isCritical: false,
+        isDodged: true,
+        attackerHealthBefore: attacker.currentHealth,
+        attackerHealthAfter: attacker.currentHealth,
+        defenderHealthBefore: defender.currentHealth,
+        defenderHealthAfter: defender.currentHealth,
+        description: generateCombatDescription(attacker, defender, 'miss', 0, false, attack.weaponName)
+      });
+      continue;
+    }
 
-  // Execute attacks for each weapon
-  attackerConfig.attacks.forEach((weaponAttack, attackIndex) => {
-    if (defenderStats.health <= 0) return; // Stop if defender is already defeated
+    // Check for critical hit
+    const isCritical = checkCritical(attackerStats.criticalChance, attackerStats.speed, defenderStats.speed);
 
-  let action: CombatAction = 'attack';
-  let damage = 0;
-  let isCritical = false;
-  let isDodged = false;
-    let wasBlocked = false;
+    // Include any weapon-specific magic damage bonus (for staves/books that carry extra spell power)
+    const weaponMagicBonus = attack.weapon?.magicDamageBonus || 0;
+    const attackBaseDamage = attackerStats.damage + attack.damage + weaponMagicBonus;
+    const attackMinDamage = Math.floor(attackBaseDamage * 0.8);
+    const attackMaxDamage = Math.floor(attackBaseDamage * 1.2);
 
-  // Check if attack hits first
-  if (!checkHit(attackerStats.accuracy, defenderStats.dodge)) {
-    action = 'miss';
-  } else {
-    // Check for dodge (separate from accuracy)
-    if (Math.random() * 100 < defenderStats.dodge) {
-      action = 'dodge';
-      isDodged = true;
-    } else {
-      // Attack hits, calculate base damage
-        let baseDamage = Math.floor(attackerStats.damage * (weaponAttack.damage / Math.max(1, attackerConfig.attacks.reduce((sum, a) => sum + a.damage, 0))));
-        baseDamage = Math.max(1, baseDamage + weaponAttack.damage);
+    let { damage, wasBlocked } = calculateDamage(
+      attackBaseDamage,
+      attackMinDamage,
+      attackMaxDamage,
+      defenderStats.armor,
+      defenderWeaponConfig.hasShield,
+      defenderWeaponConfig.shieldBlockChance,
+      defenderWeaponConfig.shieldBlockAmount,
+      attackerStats.isMagicWeapon
+    );
 
-      // Check for critical hit (includes speed bonus)
-        const totalCritChance = attackerStats.criticalChance + weaponAttack.criticalChance;
-        if (checkCritical(totalCritChance, attackerStats.speed, defenderStats.speed)) {
-        isCritical = true;
-          anyCritical = true;
-        action = 'critical';
-        baseDamage = Math.floor(baseDamage * 2.5); // 2.5x damage on crit
-      }
+    // Apply critical hit multiplier
+    if (isCritical) {
+      damage = Math.floor(damage * 2);
+    }
 
-        // Apply armor mitigation, damage variance, and shield blocking
-        const damageResult = calculateDamage(
-          baseDamage, 
-          defenderStats.armor, 
-          defenderConfig.hasShield, 
-          defenderConfig.shieldBlockChance, 
-          defenderConfig.shieldBlockAmount
-        );
-        damage = damageResult.damage;
-        wasBlocked = damageResult.wasBlocked;
+    // Update health values
+    const defenderHealthBefore = defender.currentHealth;
+    defender.currentHealth = Math.max(0, defender.currentHealth - damage);
+    const defenderHealthAfter = defender.currentHealth;
 
-      // Apply damage to defender
-      defenderStats.health = Math.max(0, defenderStats.health - damage);
-        totalDamage += damage;
-        anyHit = true;
+    // Sync defender's stats health so simulateCombat can detect defeat
+    defenderStats.health = defender.currentHealth;
+
+    // Create combat round
+    rounds.push({
+      roundNumber,
+      attacker,
+      defender,
+      action: isCritical ? 'critical' : 'attack',
+      damage,
+      isCritical,
+      isDodged: false,
+      attackerHealthBefore: attacker.currentHealth,
+      attackerHealthAfter: attacker.currentHealth,
+      defenderHealthBefore,
+      defenderHealthAfter,
+      description: generateCombatDescription(attacker, defender, isCritical ? 'critical' : 'attack', damage, isCritical, attack.weaponName, wasBlocked, attackerStats.isMagicWeapon)
+    });
+
+    // Check if defender is defeated
+    if (defender.currentHealth <= 0) {
+      break;
     }
   }
-
-    const description = generateCombatDescription(attacker, defender, action, damage, isCritical, weaponAttack.weaponName, wasBlocked);
-
-    // Create combat round for this attack
-    rounds.push({
-      roundNumber: roundNumber + (attackIndex * 0.1), // Sub-rounds for multiple attacks
-    attacker,
-    defender,
-    action,
-    damage,
-    isCritical,
-    isDodged,
-    attackerHealthBefore,
-    attackerHealthAfter: attackerStats.health,
-      defenderHealthBefore: defenderStats.health - (totalDamage - damage), // Health before this specific attack
-    defenderHealthAfter: defenderStats.health,
-    description
-    });
-  });
 
   return rounds;
 };
@@ -524,6 +563,9 @@ export const simulateCombat = (char1: Character, char2: Character): CombatResult
   const baseGold = 20 + (loser.level * 5);
   const goldGained = Math.floor(baseGold * experienceMultiplier);
 
+  // Generate loot drops
+  const lootDrops = generateLootDrops(winner, loser);
+
   const endTime = Date.now();
 
   return {
@@ -535,9 +577,71 @@ export const simulateCombat = (char1: Character, char2: Character): CombatResult
     rounds,
     experienceGained,
     goldGained,
+    lootDrops, // Add loot drops to combat result
     timestamp: startTime,
     duration: endTime - startTime
   };
+};
+
+// Generate loot drops based on winner and loser levels and stats
+const generateLootDrops = (winner: Character, loser: Character): Item[] => {
+  const drops: Item[] = [];
+  const levelDifference = winner.level - loser.level;
+
+  // Base drop chances for each rarity
+  const dropChances = {
+    common: 0.35,      // 35% chance
+    uncommon: 0.25,    // 25% chance
+    rare: 0.15,        // 15% chance
+    epic: 0.05,        // 5% chance
+    legendary: 0.01    // 1% chance
+  };
+
+  // Level requirements for each rarity
+  const levelRequirements = {
+    common: 1,
+    uncommon: 5,
+    rare: 10,
+    epic: 20,
+    legendary: 30
+  };
+
+  // Adjust drop chances based on level difference
+  const adjustedDropChances = { ...dropChances };
+  if (levelDifference > 0) {
+    // Reduce chances when fighting lower level enemies
+    Object.keys(adjustedDropChances).forEach(rarity => {
+      adjustedDropChances[rarity as ItemRarity] *= Math.max(0.5, 1 - (levelDifference * 0.1));
+    });
+  } else if (levelDifference < 0) {
+    // Increase chances when fighting higher level enemies
+    Object.keys(adjustedDropChances).forEach(rarity => {
+      adjustedDropChances[rarity as ItemRarity] *= Math.min(2, 1 + (Math.abs(levelDifference) * 0.1));
+    });
+  }
+
+  // Try to drop items of each rarity
+  Object.entries(adjustedDropChances).forEach(([rarity, chance]) => {
+    if (loser.level >= levelRequirements[rarity as ItemRarity] && Math.random() < chance) {
+      // Filter base items by rarity
+      const availableItems = baseItems.filter(item => 
+        item.rarity === rarity
+      );
+
+      if (availableItems.length > 0) {
+        // Pick a random item from available ones
+        const baseItem = availableItems[Math.floor(Math.random() * availableItems.length)];
+        
+        // Generate item with level close to loser's level
+        const itemLevel = Math.max(1, loser.level + Math.floor(Math.random() * 3) - 1);
+        const generatedItem = generateItem(baseItem, itemLevel);
+        
+        drops.push(generatedItem);
+      }
+    }
+  });
+
+  return drops;
 };
 
 // Calculate experience required for next level
@@ -626,15 +730,6 @@ export const spendStatPoint = (character: Character, statType: keyof CharacterSt
   return newCharacter;
 };
 
-// Get stat point cost for training (alternative to manual distribution)
-export const getTrainingCost = (currentValue: number): { gold: number; energy: number } => {
-  const baseCost = Math.floor(50 * Math.pow(1.2, Math.floor(currentValue / 10)));
-  return {
-    gold: baseCost,
-    energy: Math.min(50, Math.floor(baseCost / 2))
-  };
-};
-
 // Generate AI opponent based on player level
 export const generateAIOpponent = (playerLevel: number): Character => {
   const level = Math.max(1, playerLevel + Math.floor(Math.random() * 3) - 1); // ±1 level variance
@@ -688,7 +783,6 @@ export const generateAIOpponent = (playerLevel: number): Character => {
     inventory: [], // AI doesn't need inventory
     wins: Math.floor(Math.random() * level * 5),
     losses: Math.floor(Math.random() * level * 3),
-    lastTraining: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, speed: 0 },
     activeGemEffects: [], // AI characters start with no gem effects
     createdAt: Date.now(),
     lastActive: Date.now()
@@ -829,5 +923,36 @@ export const calculateEquipmentBonuses = (character: Character) => {
       dodgeChance: equipmentDodge,
       blockChance: totalBlockChance
     }
+  };
+};
+
+export const createCharacter = (name: string, characterClass: CharacterClass): Character => {
+  return {
+    id: generateId(),
+    name,
+    class: characterClass,
+    level: 1,
+    experience: 0,
+    gold: 100,
+    energy: 100,
+    maxEnergy: 100,
+    stats: { ...characterClass.startingStats },
+    unspentStatPoints: 0,
+    inventory: [],
+    equipment: {
+      mainHand: undefined,
+      offHand: undefined,
+      armor: undefined,
+      helmet: undefined,
+      boots: undefined,
+      accessory: undefined,
+    },
+    currentHealth: 100,
+    maxHealth: 100,
+    wins: 0,
+    losses: 0,
+    activeGemEffects: [],
+    createdAt: Date.now(),
+    lastActive: Date.now(),
   };
 }; 

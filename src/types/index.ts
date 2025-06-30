@@ -33,9 +33,6 @@ export interface Character {
   // Clan membership
   clanId?: string;
 
-  // Training cooldowns
-  lastTraining: Record<StatType, number>;
-
   // Active gem effects
   activeGemEffects: ActiveGemEffect[];
 
@@ -83,16 +80,14 @@ export interface Item {
   // Stat modifiers
   statBonus: Partial<CharacterStats>;
 
-  // Special properties
-  durability: number;
-  maxDurability: number;
-
   // Combat modifiers
   damage?: number;
   armor?: number;
   criticalChance?: number;
   dodgeChance?: number;
   blockChance?: number; // Shield block chance percentage
+  isMagicWeapon?: boolean; // Whether this weapon scales with intelligence
+  magicDamageBonus?: number; // Additional magic damage bonus (for offhand books)
 
   // Weapon properties
   handedness?: 'one-handed' | 'two-handed';
@@ -101,7 +96,7 @@ export interface Item {
   description: string;
 }
 
-export type ItemType = 'weapon' | 'shield' | 'armor' | 'helmet' | 'boots' | 'accessory' | 'gem';
+export type ItemType = 'weapon' | 'shield' | 'armor' | 'helmet' | 'boots' | 'accessory' | 'gem' | 'offhand';
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
 export type GemType = 'ruby' | 'sapphire' | 'emerald' | 'diamond' | 'opal' | 'citrine' | 'amber';
@@ -141,33 +136,32 @@ export interface CombatResult {
   rounds: CombatRound[];
   experienceGained: number;
   goldGained: number;
+  lootDrops: Item[];
   timestamp: number;
   duration: number; // in milliseconds
 }
 
 export interface DetailedBattleResult {
-  id: string;
+  id?: string;
+  victory: boolean;
   playerName: string;
-  playerHealthBefore: number;
+  playerHealthBefore?: number;
   playerHealthAfter: number;
   playerMaxHealth: number;
-  victory: boolean;
-  monstersKilled: {
-    name: string;
-    level: number;
-    experience: number;
-    gold: number;
-  }[];
+  weaponName?: string;
+  weaponRarity?: ItemRarity;
+  offHandWeaponName?: string;
+  offHandWeaponRarity?: ItemRarity;
+  combatLog: string[];
   totalRewards: {
     experience: number;
     gold: number;
-    items: string[];
+    items: Item[];
   };
-  combatLog: string[];
-  timestamp: number;
-  battleDuration: number;
-  weaponName?: string;  // Name of the weapon being used
-  weaponRarity?: string;  // Rarity of the weapon (common, uncommon, rare, epic, legendary, mythic)
+  monstersKilled?: any[];
+  timestamp?: number;
+  monsterName?: string;
+  monsterMaxHealth?: number;
 }
 
 export interface CombatRound {
@@ -267,27 +261,20 @@ export interface GameSettings {
   notifications: boolean;
 }
 
-// Training system
-export interface TrainingResult {
-  statType: StatType;
-  oldValue: number;
-  newValue: number;
-  energyCost: number;
-  goldCost: number;
-  success: boolean;
-  criticalSuccess: boolean;
-}
-
 // Combat calculations
 export interface CombatStats {
   health: number;
   maxHealth: number;
   damage: number;
+  minDamage: number;
+  maxDamage: number;
   armor: number;
   accuracy: number;
   dodge: number;
   criticalChance: number;
   speed: number;
+  isMagicWeapon: boolean;
+  magicDamageBonus: number;
 }
 
 // Shop system

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
-import { Character, CombatResult, CombatRound } from '../../types';
+import { Character, CombatResult, DetailedBattleResult } from '../../types';
 import { useGame } from '../../context/GameContext';
 import BattleViewer from './BattleViewer';
+import { BattleResultsModal } from './BattleResultsModal';
 import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
 
 interface CombatTabProps {
@@ -12,6 +13,8 @@ interface CombatTabProps {
 const CombatTab: React.FC<CombatTabProps> = ({ character }) => {
   const [isBattling, setIsBattling] = useState(false);
   const [currentBattle, setCurrentBattle] = useState<CombatResult | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [battleResult, setBattleResult] = useState<DetailedBattleResult | null>(null);
 
   const { startBattle, getBattleHistory } = useGame();
   const battleHistory = getBattleHistory();
@@ -19,12 +22,29 @@ const CombatTab: React.FC<CombatTabProps> = ({ character }) => {
   const handleBattleComplete = (result: CombatResult) => {
     const enemy = result.attacker.id === character.id ? result.defender : result.attacker;
     const isWinner = result.winner.id === character.id;
-    const message = isWinner
-      ? `Victory! You defeated ${enemy.name} and gained ${result.experienceGained} XP and ${result.goldGained} gold!`
-      : `Defeat! You were defeated by ${enemy.name} but gained ${Math.floor(result.experienceGained * 0.5)} XP.`;
 
-    Alert.alert(isWinner ? 'Victory!' : 'Defeat!', message);
+    // Create detailed battle result
+    const detailedResult: DetailedBattleResult = {
+      victory: isWinner,
+      playerName: character.name,
+      playerHealthAfter: isWinner ? result.winner.currentHealth : result.loser.currentHealth,
+      playerMaxHealth: character.maxHealth,
+      weaponName: character.equipment.mainHand?.name,
+      weaponRarity: character.equipment.mainHand?.rarity,
+      offHandWeaponName: character.equipment.offHand?.type === 'weapon' ? character.equipment.offHand?.name : undefined,
+      offHandWeaponRarity: character.equipment.offHand?.type === 'weapon' ? character.equipment.offHand?.rarity : undefined,
+      combatLog: result.rounds.map(round => round.description),
+      totalRewards: {
+        experience: isWinner ? result.experienceGained : Math.floor(result.experienceGained * 0.5),
+        gold: isWinner ? result.goldGained : 0,
+        items: isWinner ? result.lootDrops : []
+      },
+      monsterName: enemy.name,
+      monsterMaxHealth: enemy.maxHealth,
+    };
 
+    setBattleResult(detailedResult);
+    setShowResults(true);
     setCurrentBattle(null);
     setIsBattling(false);
   };
@@ -33,13 +53,15 @@ const CombatTab: React.FC<CombatTabProps> = ({ character }) => {
     try {
       setIsBattling(true);
       const result = await startBattle();
-
-      // Show the animated battle
       setCurrentBattle(result);
     } catch (error) {
-      Alert.alert('Error', 'Battle failed to start');
       setIsBattling(false);
     }
+  };
+
+  const handleCloseResults = () => {
+    setShowResults(false);
+    setBattleResult(null);
   };
 
   return (
@@ -71,6 +93,15 @@ const CombatTab: React.FC<CombatTabProps> = ({ character }) => {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Battle Results Modal */}
+        {battleResult && (
+          <BattleResultsModal
+            isVisible={showResults}
+            onClose={handleCloseResults}
+            result={battleResult}
+          />
+        )}
 
         {/* Battle Stats */}
         <View style={styles.statsContainer}>

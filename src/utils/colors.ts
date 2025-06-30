@@ -243,6 +243,10 @@ export const ColorUtils = {
         return '#E5E7EB'; // White/Silver for Dexterity
       case 'opal':
         return '#A855F7'; // Purple for Speed
+      case 'citrine':
+        return '#F59E0B'; // Orange for Citrine
+      case 'amber':
+        return '#D97706'; // Dark Orange for Amber
       default:
         return Colors.primary;
     }

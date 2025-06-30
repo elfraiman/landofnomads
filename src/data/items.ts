@@ -2149,40 +2149,56 @@ export const generateShopInventory = (shopLevel: number = 1): Item[] => {
 
 // ENHANCED PRICE CALCULATION for high-tier items
 export const calculateItemPrice = (item: Omit<Item, 'id' | 'level' | 'price' | 'durability' | 'maxDurability'>, level: number): number => {
-  const basePrice = {
-    common: 50,
-    uncommon: 150,
-    rare: 500,
-    epic: 2000,
-    legendary: 10000
+  // Base prices by rarity and type
+  const basePrice: Record<ItemRarity, Record<ItemType, number>> = {
+    common: {
+      weapon: 100,
+      armor: 120,
+      shield: 80,
+      boots: 60,
+      accessory: 50
+    },
+    uncommon: {
+      weapon: 250,
+      armor: 300,
+      shield: 200,
+      boots: 150,
+      accessory: 125
+    },
+    rare: {
+      weapon: 600,
+      armor: 700,
+      shield: 500,
+      boots: 400,
+      accessory: 300
+    },
+    epic: {
+      weapon: 1200,
+      armor: 1400,
+      shield: 1000,
+      boots: 800,
+      accessory: 600
+    },
+    legendary: {
+      weapon: 2500,
+      armor: 3000,
+      shield: 2000,
+      boots: 1600,
+      accessory: 1200
+    }
   };
 
-  // Calculate total item power for pricing
-  let itemPower = 0;
+  // Get base price for item type and rarity
+  const itemBasePrice = basePrice[item.rarity][item.type];
 
-  // Add stat bonus values
-  Object.values(item.statBonus).forEach(value => {
-    if (typeof value === 'number') {
-      itemPower += value;
-    }
-  });
+  // Apply very mild level scaling (only 10% increase per level, capped at level 30)
+  const levelMultiplier = 1 + (Math.min(level - 1, 30) * 0.1);
 
-  // Add combat values
-  if (item.armor) itemPower += item.armor * 0.5; // Armor worth 0.5x its value
-  if (item.damage) itemPower += item.damage * 2; // Damage worth 2x its value
-  if (item.criticalChance) itemPower += item.criticalChance * 10;
-  if (item.dodgeChance) itemPower += item.dodgeChance * 10;
+  // Calculate final price
+  const finalPrice = Math.floor(itemBasePrice * levelMultiplier);
 
-  // Level scaling with diminishing returns for high levels
-  const levelMultiplier = Math.pow(1.2, Math.min(level - 1, 50)) * Math.pow(1.05, Math.max(level - 51, 0));
-
-  // Power-based pricing with exponential scaling for very high-tier items
-  const powerMultiplier = itemPower > 1000 ? Math.pow(itemPower / 1000, 1.5) : Math.max(1, itemPower / 100);
-
-  const finalPrice = Math.floor(basePrice[item.rarity] * levelMultiplier * powerMultiplier);
-
-  // Cap prices at reasonable maximums to prevent overflow
-  return Math.min(finalPrice, 999999999999); // 999 billion max
+  // Cap prices at reasonable maximums
+  return Math.min(finalPrice, 100000); // 100k max
 };
 
 // Enhanced item generation with proper pricing

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useGame } from '../../context/GameContext';
-import { DetailedBattleResult } from '../../types';
+import { Character, DetailedBattleResult, CombatResult, CombatRound, Item } from '../../types';
 import { BattleResultsModal } from '../combat/BattleResultsModal';
 import { useCustomAlert } from '../ui/CustomAlert';
 import { Colors, ColorUtils, RPGTextStyles, MapGradients } from '../../utils/colors';
@@ -196,7 +196,11 @@ export const WildernessTab: React.FC = () => {
       setShowBattleResults(true);
     } catch (error) {
       console.error('Combat error:', error);
-      // Combat error - just log it for now
+      showAlert(
+        'Combat Error',
+        'An error occurred during combat.',
+        [{ text: 'OK', style: 'default' }]
+      );
     } finally {
       setIsFighting(false);
     }
@@ -262,37 +266,37 @@ export const WildernessTab: React.FC = () => {
     <View style={styles.legend}>
       <Text style={styles.legendTitle}>Tile Legend</Text>
       <View style={styles.legendGrid}>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendEmoji}>P</Text>
-          <Text style={styles.legendText}>Player</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendEmoji}>G</Text>
-          <Text style={styles.legendText}>Grass</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendEmoji}>F</Text>
-          <Text style={styles.legendText}>Forest</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendEmoji}>M</Text>
-          <Text style={styles.legendText}>Mountain</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendEmoji}>C</Text>
-          <Text style={styles.legendText}>Cave</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendEmoji}>V</Text>
-          <Text style={styles.legendText}>Village</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendEmoji}>O</Text>
-          <Text style={styles.legendText}>Portal</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <Text style={styles.legendEmoji}>S</Text>
-          <Text style={styles.legendText}>Shop</Text>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>P</Text>
+        <Text style={styles.legendText}>Player</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>G</Text>
+        <Text style={styles.legendText}>Grass</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>F</Text>
+        <Text style={styles.legendText}>Forest</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>M</Text>
+        <Text style={styles.legendText}>Mountain</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>C</Text>
+        <Text style={styles.legendText}>Cave</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>V</Text>
+        <Text style={styles.legendText}>Village</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>O</Text>
+        <Text style={styles.legendText}>Portal</Text>
+      </View>
+      <View style={styles.legendItem}>
+        <Text style={styles.legendEmoji}>S</Text>
+        <Text style={styles.legendText}>Shop</Text>
         </View>
       </View>
     </View>
@@ -496,9 +500,9 @@ export const WildernessTab: React.FC = () => {
         {currentTile.spawnedMonsters.filter(m => m.isAlive).length > 0 ? (
           <>
             <View style={styles.monstersSectionHeader}>
-              <Text style={styles.monstersSectionTitle}>
-                Monsters in {currentTile.name}
-              </Text>
+            <Text style={styles.monstersSectionTitle}>
+              Monsters in {currentTile.name}
+            </Text>
               <Text style={styles.monstersCount}>
                 ({currentTile.spawnedMonsters.filter(m => m.isAlive).length})
               </Text>
@@ -554,68 +558,47 @@ export const WildernessTab: React.FC = () => {
       <View style={styles.instructions}>
         <Text style={styles.instructionsTitle}>How to Explore & Grind</Text>
         <Text style={styles.instructionsText}>
-          • Tap adjacent tiles to move{'\n'}
+          • Tap adjacent tiles to move, the more you move the more monsters you will encounter{'\n'}
           • Green tiles are available moves{'\n'}
-          • Red circles are spawned monsters{'\n'}
           • Click monster names to fight them{'\n'}
-          • Move around to spawn more monsters{'\n'}
-          • Fight monsters for experience and gold{'\n'}
-          • Rest to recover health (costs energy){'\n'}
-          • Perfect for grinding and exploration!
         </Text>
       </View>
 
       {/* Battle Results Modal */}
+      {battleResult && (
       <BattleResultsModal
-        battleResult={battleResult}
-        visible={showBattleResults}
-        currentCharacter={currentCharacter}
-        onHealCharacter={(cost: number) => {
-          if (currentCharacter && currentCharacter.gold >= cost) {
-            const updatedCharacter = {
-              ...currentCharacter,
-              currentHealth: currentCharacter.maxHealth, // Set to full health
-              gold: currentCharacter.gold - cost
-            };
-            updateCharacter(updatedCharacter);
-
-            // Show confirmation
-            showAlert(
-              'Healed Successfully',
-              `You have been fully healed for ${cost} gold!`,
-              [{ text: 'OK', style: 'default' }]
-            );
-          }
-        }}
+          isVisible={showBattleResults}
         onClose={() => {
           setShowBattleResults(false);
           setBattleResult(null);
         }}
+          result={battleResult}
       />
+      )}
 
       {/* Portal Modal */}
       <PortalModal
         visible={showPortalModal}
+        onClose={() => setShowPortalModal(false)}
         availableMaps={getAvailableMaps()}
         currentMapId={currentMap.id}
-        playerLevel={currentCharacter?.level || 1}
         onSelectMap={handlePortalSwitch}
-        onClose={() => setShowPortalModal(false)}
         canAccessMap={canAccessMap}
+        playerLevel={currentCharacter?.level || 1}
       />
 
       {/* Merchant Modal */}
       {selectedMerchant && (
         <MerchantModal
           visible={showMerchantModal}
-          merchantName={selectedMerchant.name}
-          merchantDescription={selectedMerchant.description}
-          mapId={selectedMerchant.mapId}
-          playerLevel={currentCharacter?.level || 1}
           onClose={() => {
             setShowMerchantModal(false);
             setSelectedMerchant(null);
           }}
+          merchantName={selectedMerchant.name}
+          merchantDescription={selectedMerchant.description}
+          mapId={selectedMerchant.mapId}
+          playerLevel={currentCharacter?.level || 1}
         />
       )}
     </ScrollView>
