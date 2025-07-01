@@ -64,10 +64,6 @@ export const ItemStatsDisplay: React.FC<ItemStatsDisplayProps> = ({
       };
     });
 
-  const durabilityPercentage = (item.durability / item.maxDurability) * 100;
-  const durabilityColor = durabilityPercentage > 70 ? Colors.success : 
-                         durabilityPercentage > 30 ? Colors.warning : Colors.error;
-
   return (
     <View style={[
       styles.container,

@@ -93,7 +93,8 @@ const InventoryTab: React.FC<InventoryTabProps> = ({ character }) => {
         armor: 'armor',
         helmet: 'helmet',
         boots: 'boots',
-        accessory: 'accessory'
+        accessory: 'accessory',
+        offhand: 'offHand'
       };
 
       const slot = slotMap[item.type as Exclude<ItemType, 'gem'>];

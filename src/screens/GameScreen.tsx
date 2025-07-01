@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Dimensions
 import { useGame } from '../context/GameContext';
 import { Colors, ColorUtils, RPGTextStyles } from '../utils/colors';
 import CharacterStatsTab from '../components/character/CharacterStatsTab';
-import CombatTab from '../components/combat/CombatTab';
+import { VillageTab } from '../components/village/VillageTab';
 import EquipmentTab from '../components/character/EquipmentTab';
 import InventoryTab from '../components/character/InventoryTab';
 import { GemTab } from '../components/character/GemTab';
@@ -13,7 +13,7 @@ import { NotificationSystem } from '../components/ui/NotificationSystem';
 
 const { width } = Dimensions.get('window');
 
-type TabType = 'stats' | 'combat' | 'equipment' | 'inventory' | 'gems' | 'wilderness';
+type TabType = 'stats' | 'village' | 'equipment' | 'inventory' | 'gems' | 'wilderness';
 
 interface Tab {
   id: TabType;
@@ -33,7 +33,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
   // Tab configuration for easy management
   const tabs: Tab[] = [
     { id: 'stats', label: 'Stats', emoji: '' },
-    { id: 'combat', label: 'Combat', emoji: '' },
+    { id: 'village', label: 'Village', emoji: '' },
     { id: 'equipment', label: 'Equipment', emoji: '' },
     { id: 'inventory', label: 'Inventory', emoji: '' },
     { id: 'gems', label: 'Gems', emoji: '' },
@@ -70,8 +70,8 @@ const GameScreen: React.FC<GameScreenProps> = ({ onLogout }) => {
     switch (activeTab) {
       case 'stats':
         return <CharacterStatsTab character={currentCharacter} />;
-      case 'combat':
-        return <CombatTab character={currentCharacter} />;
+      case 'village':
+        return <VillageTab />;
       case 'equipment':
         return <EquipmentTab character={currentCharacter} />;
       case 'inventory':

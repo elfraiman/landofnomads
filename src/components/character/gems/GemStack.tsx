@@ -11,7 +11,7 @@ interface GemStackProps {
   gemType: string;
   gemTier: string;
   gemsInStack: Gem[];
-  onStartFusion: (gemType: GemType, gemTier: GemTier) => void;
+  onStartFusion?: (gemType: GemType, gemTier: GemTier) => void;
 }
 
 export const GemStack: React.FC<GemStackProps> = ({

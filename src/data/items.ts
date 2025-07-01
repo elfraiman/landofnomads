@@ -2155,36 +2155,51 @@ export const calculateItemPrice = (item: Omit<Item, 'id' | 'level' | 'price' | '
       weapon: 100,
       armor: 120,
       shield: 80,
+      helmet: 90,
       boots: 60,
-      accessory: 50
+      accessory: 50,
+      gem: 0,
+      offhand: 80
     },
     uncommon: {
       weapon: 250,
       armor: 300,
       shield: 200,
+      helmet: 220,
       boots: 150,
-      accessory: 125
+      accessory: 125,
+      gem: 0,
+      offhand: 200
     },
     rare: {
       weapon: 600,
       armor: 700,
       shield: 500,
+      helmet: 550,
       boots: 400,
-      accessory: 300
+      accessory: 300,
+      gem: 0,
+      offhand: 500
     },
     epic: {
       weapon: 1200,
       armor: 1400,
       shield: 1000,
+      helmet: 900,
       boots: 800,
-      accessory: 600
+      accessory: 600,
+      gem: 0,
+      offhand: 1000
     },
     legendary: {
       weapon: 2500,
       armor: 3000,
       shield: 2000,
+      helmet: 1800,
       boots: 1600,
-      accessory: 1200
+      accessory: 1200,
+      gem: 0,
+      offhand: 2000
     }
   };
 
@@ -2223,9 +2238,7 @@ export const generateItem = (baseItem: typeof baseItems[0], level: number): Item
     damage: baseItem.damage ? baseItem.damage + levelBonus * 2 : undefined,
     armor: baseItem.armor ? baseItem.armor + levelBonus : undefined,
     criticalChance: baseItem.criticalChance,
-    dodgeChance: baseItem.dodgeChance,
-    durability: 100,
-    maxDurability: 100
+    dodgeChance: baseItem.dodgeChance
   };
 };
 

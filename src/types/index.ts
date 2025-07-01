@@ -39,6 +39,10 @@ export interface Character {
   // Creation timestamp
   createdAt: number;
   lastActive: number;
+
+  // Quest system
+  activeQuests: QuestProgress[]; // Quests currently in progress
+  completedQuests: QuestProgress[]; // Finished quests (claimed or unclaimed)
 }
 
 export interface CharacterStats {
@@ -92,6 +96,10 @@ export interface Item {
   // Weapon properties
   handedness?: 'one-handed' | 'two-handed';
   weaponSpeed?: number; // Attack speed modifier (higher = faster)
+
+  // Optional durability system (currently unused)
+  durability?: number;
+  maxDurability?: number;
 
   description: string;
 }
@@ -162,6 +170,8 @@ export interface DetailedBattleResult {
   timestamp?: number;
   monsterName?: string;
   monsterMaxHealth?: number;
+  battleDuration?: number;
+  questProgressUpdates?: { questName: string; progress: number; goal: number }[];
 }
 
 export interface CombatRound {
@@ -310,4 +320,28 @@ export interface GameNotification {
 }
 
 // Re-export wilderness types
-export * from './wilderness'; 
+export * from './wilderness';
+
+// Quest definitions (static data loaded per map)
+export interface QuestDefinition {
+  id: string;
+  name: string;
+  description: string;
+  type: 'kill' | 'collect' | 'explore';
+  target: string; // e.g., monster id, item id, tile id
+  goal: number; // Amount required to complete
+  rewards: QuestReward[];
+  mapId: string; // Which map this quest belongs to
+}
+
+// Runtime quest progress stored on a character
+export interface QuestProgress {
+  id: string; // Unique ID for this quest instance
+  questId: string; // Reference to QuestDefinition.id
+  progress: number; // Current amount achieved
+  goal: number; // Cached from definition for quick access
+  isCompleted: boolean; // Reached goal
+  isClaimed: boolean; // Rewards already claimed
+  startedAt: number;
+  completedAt?: number;
+} 

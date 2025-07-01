@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Character, GameState, StatType, CombatResult, Item, ItemType, WildernessState, PlayerPosition, SpawnedMonster, DetailedBattleResult } from '../types';
+import { Character, GameState, StatType, CombatResult, Item, ItemType, WildernessState, PlayerPosition, SpawnedMonster, DetailedBattleResult, QuestDefinition, QuestProgress, QuestReward } from '../types';
 import { WildernessMonster, LootDrop } from '../types/wilderness';
 import { characterClasses } from '../data/classes';
 import { generateStarterEquipment, baseItems, generateItem } from '../data/items';
@@ -7,6 +7,7 @@ import { simulateCombat, generateAIOpponent, canLevelUp, levelUpCharacter } from
 import { createStarterMap, starterMapMonsters, calculateMonsterLevel, scaleMonsterStats, mapConfigs, getMapById, canAccessMap as canAccessMapHelper, createWildernessMap } from '../data/wilderness';
 import { Notification } from '../components/ui/NotificationSystem';
 import { PlatformStorage } from '../utils/storage';
+import { questDefinitions } from '../data/quests';
 
 interface GameContextType {
   // Game state
@@ -82,6 +83,11 @@ interface GameContextType {
   // Utilities
   isLoading: boolean;
   error: string | null;
+
+  // Quest system
+  acceptQuest: (quest: QuestDefinition) => boolean;
+  claimQuestReward: (questProgressId: string) => boolean;
+  getQuestDefinition: (questId: string) => QuestDefinition | undefined;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -194,7 +200,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         losses: 0,
         activeGemEffects: [], // Start with no gem effects
         createdAt: Date.now(),
-        lastActive: Date.now()
+        lastActive: Date.now(),
+        activeQuests: [],
+        completedQuests: []
       };
 
       setGameState(prev => ({
@@ -231,13 +239,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateCharacter = (updatedCharacter: Character) => {
-    setGameState(prev => ({
-      ...prev,
-      characters: prev.characters.map(c =>
-        c.id === updatedCharacter.id ? updatedCharacter : c
-      ),
-      currentCharacter: prev.currentCharacter?.id === updatedCharacter.id ? updatedCharacter : prev.currentCharacter
+    console.log(`[Character Debug] updateCharacter called for ${updatedCharacter.name}`);
+    console.log(`[Character Debug] Quest state being set:`, updatedCharacter.activeQuests.map(q => `${q.questId}: ${q.progress}/${q.goal}`));
+    setGameState(prevState => ({
+      ...prevState,
+      currentCharacter: updatedCharacter,
+      characters: prevState.characters.map(char => 
+        char.id === updatedCharacter.id ? updatedCharacter : char
+      )
     }));
+    console.log(`[Character Debug] Character state updated`);
   };
 
   const startBattle = async (targetId?: string): Promise<CombatResult> => {
@@ -401,7 +412,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         armor: 'armor',
         helmet: 'helmet',
         boots: 'boots',
-        accessory: 'accessory'
+        accessory: 'accessory',
+        offhand: 'offHand'
       };
 
       targetSlot = slotMap[item.type as Exclude<ItemType, 'weapon' | 'shield' | 'gem'>];
@@ -506,28 +518,31 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const addItemToInventory = (item: Item) => {
-    if (!gameState.currentCharacter) {
-      console.error('❌ Cannot add item: no current character');
-      return;
-    }
+    setGameState(prev => {
+      if (!prev.currentCharacter) {
+        console.error('❌ Cannot add item: no current character');
+        return prev;
+      }
 
-    const character = gameState.currentCharacter;
-    console.log(`Inventory - Adding ${item.name} to ${character.name}'s inventory (current inventory size: ${character.inventory.length})`);
+      const character = prev.currentCharacter;
+      console.log(`Inventory - Adding ${item.name} to ${character.name}'s inventory (current inventory size: ${character.inventory.length})`);
 
-    const updatedCharacter = {
-      ...character,
-      inventory: [...character.inventory, item]
-    };
+      const updatedCharacter: Character = {
+        ...character,
+        inventory: [...character.inventory, item]
+      };
 
-    console.log(`Inventory - Updated inventory size: ${updatedCharacter.inventory.length}`);
+      console.log(`Inventory - Updated inventory size: ${updatedCharacter.inventory.length}`);
 
-    setGameState(prev => ({
-      ...prev,
-      currentCharacter: updatedCharacter,
-      characters: prev.characters.map(c =>
-        c.id === character.id ? updatedCharacter : c
-      )
-    }));
+      // Return new state with updated character
+      return {
+        ...prev,
+        currentCharacter: updatedCharacter,
+        characters: prev.characters.map(c =>
+          c.id === updatedCharacter.id ? updatedCharacter : c
+        )
+      };
+    });
 
     // Save the game after adding item to inventory
     setTimeout(() => {
@@ -632,9 +647,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const saveGame = async () => {
     try {
+      // Prepare wilderness state for serialization (convert Set to array)
+      const serializedWilderness = wildernessState ? {
+        ...wildernessState,
+        exploredTiles: Array.from(wildernessState.exploredTiles)
+      } : null;
+
       const dataToSave = {
         ...gameState,
-        wildernessState, // Include wilderness state in save data
+        wildernessState: serializedWilderness,
         lastSave: Date.now()
       };
       await PlatformStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
@@ -654,14 +675,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const parsedData = JSON.parse(savedData) as any; // Use any to handle both old and new save formats
 
         // Migrate old characters to include inventory field
-        const migratedCharacters = parsedData.characters.map((character: any) => ({
+        const migratedCharacters = (Array.isArray(parsedData.characters) ? parsedData.characters : Object.values(parsedData.characters || {})).map((character: any) => ({
           ...character,
-          inventory: character.inventory || [] // Add empty inventory if missing
+          inventory: character.inventory || [],
+          activeQuests: character.activeQuests || [],
+          completedQuests: character.completedQuests || [],
         }));
 
         const migratedCurrentCharacter = parsedData.currentCharacter ? {
           ...parsedData.currentCharacter,
-          inventory: parsedData.currentCharacter.inventory || []
+          inventory: parsedData.currentCharacter.inventory || [],
+          activeQuests: parsedData.currentCharacter.activeQuests || [],
+          completedQuests: parsedData.currentCharacter.completedQuests || [],
         } : undefined;
 
         setGameState({
@@ -672,10 +697,25 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // Load wilderness state if it exists
         if (parsedData.wildernessState) {
-          // Convert Set back from array if needed
-          const exploredTiles = parsedData.wildernessState.exploredTiles instanceof Set
-            ? parsedData.wildernessState.exploredTiles
-            : new Set(parsedData.wildernessState.exploredTiles || []);
+          // Restore exploredTiles (supports legacy formats)
+          let exploredTilesRaw = parsedData.wildernessState.exploredTiles;
+
+          let exploredTiles: Set<string>;
+          if (Array.isArray(exploredTilesRaw)) {
+            try {
+              exploredTiles = new Set(exploredTilesRaw as string[]);
+            } catch (e) {
+              console.warn('Failed to reconstruct exploredTiles from array:', e);
+              exploredTiles = new Set<string>();
+            }
+          } else if (exploredTilesRaw instanceof Set) {
+            exploredTiles = exploredTilesRaw as Set<string>;
+          } else if (exploredTilesRaw && typeof exploredTilesRaw === 'object') {
+            // Legacy object where keys were tile IDs
+            exploredTiles = new Set(Object.keys(exploredTilesRaw));
+          } else {
+            exploredTiles = new Set();
+          }
 
           // Check if we need to migrate from old starter_map to new greenwood_valley
           let wildernessToLoad = parsedData.wildernessState;
@@ -1013,6 +1053,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fightMonster = async (spawnedMonsterId: string): Promise<DetailedBattleResult> => {
     const battleStartTime = Date.now();
+    let questProgressUpdates: { questName: string; progress: number; goal: number }[] = [];
+    let spawnedMonster: SpawnedMonster | undefined;
 
     if (!wildernessState || !gameState.currentCharacter) {
       return {
@@ -1040,7 +1082,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const playerHealthBefore = character.currentHealth;
 
     // Find the spawned monster
-    let spawnedMonster: SpawnedMonster | null = null;
     let targetTile: any = null;
 
     for (const row of wildernessState.currentMap.tiles) {
@@ -1110,8 +1151,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             level: spawnedMonster.monster.level,
             price: 0,
             statBonus: {},
-            durability: 100,
-            maxDurability: 100,
             damage: Math.max(1, Math.floor((spawnedMonster.monster.baseStats.damage || 5) * 0.2)), // Further reduce weapon damage
             handedness: 'one-handed',
             weaponSpeed: 5,
@@ -1125,8 +1164,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             level: spawnedMonster.monster.level,
             price: 0,
             statBonus: {},
-            durability: 100,
-            maxDurability: 100,
             armor: Math.floor((spawnedMonster.monster.baseStats.armor || 0) * 0.5), // Reduce monster armor
             description: 'Natural armor'
           } : undefined
@@ -1136,7 +1173,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         losses: 0,
         activeGemEffects: [], // Monsters don't have gem effects
         createdAt: Date.now(),
-        lastActive: Date.now()
+        lastActive: Date.now(),
+        activeQuests: [],
+        completedQuests: []
       };
 
       // Create a temporary character with current health for combat simulation
@@ -1177,13 +1216,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      let rewards = { experience: 0, gold: 0, items: [] as string[] };
+      let rewards = { experience: 0, gold: 0, items: [] as Item[] };
       let monstersKilled: DetailedBattleResult['monstersKilled'] = [];
 
       if (victory) {
         // Calculate rewards based on monster loot table
         const lootResult = generateLoot(spawnedMonster.monster, character.level);
-
+        
         // Add actual items to inventory (not string IDs)
         console.log(`Loot - Generated: ${lootResult.items.length} items`, lootResult.items.map(i => `${i.name} (${i.type})`));
 
@@ -1192,7 +1231,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log(`Inventory - Adding ${lootResult.items.length} items to inventory. New size: ${updatedInventory.length}`);
 
         // Show notifications for dropped items
-        lootResult.items.forEach(item => {
+        lootResult.items.forEach((item: Item) => {
           console.log(`Inventory - Item added to inventory: ${item.name} (${item.type}, ID: ${item.id})`);
 
           // Show special notification for gem drops
@@ -1208,17 +1247,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           } else {
             console.log(`Item Drop - Regular item dropped: ${item.name} (${item.type})`);
             // Show notification for regular item drop
-          addNotification({
-            type: 'item_drop',
-            title: 'Item Found!',
-            message: `${spawnedMonster.monster.name} dropped an item!`,
-            itemDetails: {
-              name: item.name,
-              level: item.level,
-              rarity: item.rarity
-            },
-            duration: 3000
-          });
+            addNotification({
+              type: 'item_drop',
+              title: 'Item Found!',
+              message: `${spawnedMonster.monster.name} dropped an item!`,
+              itemDetails: {
+                name: item.name,
+                level: item.level,
+                rarity: item.rarity
+              },
+              duration: 3000
+            });
           }
         });
 
@@ -1226,7 +1265,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         rewards = {
           experience: lootResult.experience,
           gold: lootResult.gold,
-          items: lootResult.items.map(item => item.name) // Convert to names for display
+          items: lootResult.items
         };
 
         // Add to monsters killed list
@@ -1237,17 +1276,43 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           gold: rewards.gold
         });
 
-        // Apply rewards and update character (including the new inventory)
+        // Update quest progress for kill quests and capture updates
+        console.log(`[Quest Debug] About to call updateQuestProgress for monster: ${spawnedMonster.monster.name} (id: ${spawnedMonster.monster.id})`);
+        const updatedActive = character.activeQuests.map(qp => {
+          const def = questDefinitions.find(q => q.id === qp.questId);
+          if (!def) return qp;
+          if (def.type !== 'kill' || def.target !== spawnedMonster.monster.id) return qp;
+          if (qp.isCompleted) return qp;
+
+          const newProgress = Math.min(qp.progress + 1, qp.goal);
+          // Only add to questProgressUpdates if progress actually changed
+          if (newProgress !== qp.progress) {
+            // Remove any existing updates for this quest
+            const existingIdx = questProgressUpdates.findIndex(q => q.questName === def.name);
+            if (existingIdx !== -1) {
+              questProgressUpdates.splice(existingIdx, 1);
+            }
+            // Add the new update
+            questProgressUpdates.push({ questName: def.name, progress: newProgress, goal: qp.goal });
+          }
+
+          return {
+            ...qp,
+            progress: newProgress,
+            isCompleted: newProgress >= qp.goal,
+            completedAt: newProgress >= qp.goal ? Date.now() : qp.completedAt,
+          };
+        });
+
         let updatedCharacter = {
           ...character,
+          activeQuests: updatedActive,
           inventory: updatedInventory,
           experience: character.experience + rewards.experience,
           gold: character.gold + rewards.gold,
           currentHealth: playerHealthAfter,
           wins: character.wins + 1
         };
-        
-
 
         // Update gem effects after combat (reduce duration)
         try {
@@ -1303,10 +1368,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         combatLog.push(`Rewards:
           +${rewards.experience} XP,
           +${rewards.gold} Gold,
-          ${rewards.items.length > 0 ? `Items: ${rewards.items.join(', ')}` : 'No items found'}`);
+          ${rewards.items.length > 0 ? `Items: ${rewards.items.map(i=>i.name).join(', ')}` : 'No items found'}`);
 
         if (rewards.items.length > 0) {
-          combatLog.push(`Items found: ${rewards.items.join(', ')}`);
+          combatLog.push(`Items found: ${rewards.items.map(i=>i.name).join(', ')}`);
+        }
+
+        // Get final quest progress updates after all character updates
+        const finalChar = gameState.currentCharacter;
+        if (finalChar) {
+          finalChar.activeQuests.forEach(qp => {
+            const def = questDefinitions.find(q => q.id === qp.questId);
+            if (def && def.type === 'kill' && def.target === spawnedMonster.monster.id) {
+              questProgressUpdates.push({ questName: def.name, progress: qp.progress, goal: qp.goal });
+            }
+          });
         }
       } else {
         if (playerHealthAfter === 0) {
@@ -1334,6 +1410,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         offHandWeaponRarity: character.equipment.offHand?.type === 'weapon' ? character.equipment.offHand?.rarity : undefined,
         monsterName: spawnedMonster.monster.name,
         monsterMaxHealth: monsterMaxHealth,
+        questProgressUpdates,
       };
     } catch (error) {
       console.error('Combat error:', error);
@@ -1440,7 +1517,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     let victories = 0;
     let defeats = 0;
-    let totalRewards = { experience: 0, gold: 0, items: [] as string[] };
+    let totalRewards = { experience: 0, gold: 0, items: [] as Item[] };
     let combatLog: string[] = [];
     let monstersKilled: DetailedBattleResult['monstersKilled'] = [];
     let currentPlayerHealth = character.currentHealth;
@@ -1470,15 +1547,15 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           currentPlayerHealth = result.playerHealthAfter;
           totalRewards.experience += result.totalRewards.experience;
           totalRewards.gold += result.totalRewards.gold;
-          totalRewards.items.push(...result.totalRewards.items);
-          monstersKilled.push(...result.monstersKilled);
+          totalRewards.items.push(...(result.totalRewards.items ?? []));
+          monstersKilled.push(...(result.monstersKilled ?? []));
 
           combatLog.push(`Victory! ${monster.monster.name} defeated`);
           combatLog.push(`Health: ${currentPlayerHealth}/${character.maxHealth} HP`);
           combatLog.push(`Gained: +${result.totalRewards.experience} XP, +${result.totalRewards.gold} Gold`);
 
-          if (result.totalRewards.items.length > 0) {
-            combatLog.push(`Items: ${result.totalRewards.items.join(', ')}`);
+          if ((result.totalRewards.items ?? []).length > 0) {
+            combatLog.push(`Items: ${(result.totalRewards.items ?? []).map(i=>i.name).join(', ')}`);
           }
         } else {
           defeats++;
@@ -1530,8 +1607,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     combatLog.push(`Experience: +${totalRewards.experience} XP`);
     combatLog.push(`Gold: +${totalRewards.gold}`);
 
-    if (totalRewards.items.length > 0) {
-      combatLog.push(`Items Found: ${totalRewards.items.join(', ')}`);
+    if ((totalRewards.items ?? []).length > 0) {
+      combatLog.push(`Items Found: ${(totalRewards.items ?? []).map(i=>i.name).join(', ')}`);
     }
 
     const overallVictory = victories > defeats && currentPlayerHealth > 0;
@@ -1543,7 +1620,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       playerHealthAfter: currentPlayerHealth,
       playerMaxHealth: character.maxHealth,
       victory: overallVictory,
-      monstersKilled,
+      monstersKilled: monstersKilled,
       totalRewards,
       combatLog,
       timestamp: battleStartTime,
@@ -1906,6 +1983,128 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  /* =====================
+    Quest System Helpers
+  ===================== */
+
+  const acceptQuest = (questDef: QuestDefinition): boolean => {
+    if (!gameState.currentCharacter) return false;
+
+    // Check if already active
+    if (gameState.currentCharacter.activeQuests.find(q => q.questId === questDef.id)) return false;
+
+    const newProgress: QuestProgress = {
+      id: `qp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      questId: questDef.id,
+      progress: 0,
+      goal: questDef.goal,
+      isCompleted: false,
+      isClaimed: false,
+      startedAt: Date.now(),
+    };
+
+    // Update character
+    const updatedCharacter = {
+      ...gameState.currentCharacter,
+      activeQuests: [...gameState.currentCharacter.activeQuests, newProgress]
+    } as Character;
+
+    updateCharacter(updatedCharacter);
+    saveGame();
+    return true;
+  };
+
+  const updateQuestProgress = (type: 'kill' | 'collect' | 'explore', target: string, amount: number = 1): void => {
+    console.log(`[Quest Debug] updateQuestProgress called: type=${type}, target=${target}, amount=${amount}`);
+    if (!gameState.currentCharacter) return;
+
+    const char = gameState.currentCharacter;
+    console.log(`[Quest Debug] Character has ${char.activeQuests.length} active quests`);
+    console.log(`[Quest Debug] Character before update:`, char.activeQuests.map(q => `${q.questId}: ${q.progress}/${q.goal}`));
+    let changed = false;
+    const updatedActive = char.activeQuests.map(qp => {
+      const def = questDefinitions.find(q => q.id === qp.questId);
+      console.log(`[Quest Debug] Checking quest ${qp.questId}, def found: ${!!def}`);
+      if (!def) return qp;
+      console.log(`[Quest Debug] Quest def: type=${def.type}, target=${def.target}, current progress=${qp.progress}/${qp.goal}`);
+      if (def.type !== type || def.target !== target) {
+        console.log(`[Quest Debug] Quest ${def.name} doesn't match - type: ${def.type}!=${type} or target: ${def.target}!=${target}`);
+        return qp;
+      }
+      if (qp.isCompleted) return qp;
+
+      const newProgress = Math.min(qp.progress + amount, qp.goal);
+      console.log(`[Quest Debug] Quest ${def.name} progress: ${qp.progress} -> ${newProgress}`);
+      if (newProgress !== qp.progress) changed = true;
+
+      const updatedQuest = {
+        ...qp,
+        progress: newProgress,
+        isCompleted: newProgress >= qp.goal,
+        completedAt: newProgress >= qp.goal ? Date.now() : qp.completedAt,
+      };
+      console.log(`[Quest Debug] Updated quest object:`, updatedQuest);
+      return updatedQuest;
+    });
+
+    console.log(`[Quest Debug] Quest progress changed: ${changed}`);
+    console.log(`[Quest Debug] Updated active quests:`, updatedActive.map(q => `${q.questId}: ${q.progress}/${q.goal}`));
+    if (changed) {
+      const updatedCharacter = {
+        ...char,
+        activeQuests: updatedActive,
+      } as Character;
+      console.log(`[Quest Debug] About to call updateCharacter with:`, updatedCharacter.activeQuests.map(q => `${q.questId}: ${q.progress}/${q.goal}`));
+      updateCharacter(updatedCharacter);
+      saveGame();
+      console.log(`[Quest Debug] Character updated and saved`);
+    }
+  };
+
+  const claimQuestReward = (questProgressId: string): boolean => {
+    if (!gameState.currentCharacter) return false;
+
+    const char = gameState.currentCharacter;
+    const qp = char.activeQuests.find(q => q.id === questProgressId);
+    if (!qp || !qp.isCompleted || qp.isClaimed) return false;
+
+    const def = questDefinitions.find(q => q.id === qp.questId);
+    if (!def) return false;
+
+    // Apply rewards
+    def.rewards.forEach(rw => {
+      switch (rw.type) {
+        case 'experience':
+          char.experience += rw.amount;
+          break;
+        case 'gold':
+          char.gold += rw.amount;
+          break;
+        case 'energy':
+          char.energy = Math.min(char.maxEnergy, char.energy + rw.amount);
+          break;
+        case 'item':
+          // Items as rewards currently disabled (no durability/energy)
+          break;
+      }
+    });
+
+    // Move to completed list
+    const updatedChar: Character = {
+      ...char,
+      activeQuests: char.activeQuests.filter(q => q.id !== questProgressId),
+      completedQuests: [...char.completedQuests, { ...qp, isClaimed: true }]
+    };
+
+    updateCharacter(updatedChar);
+    saveGame();
+    return true;
+  };
+
+  const getQuestDefinition = (questId: string): QuestDefinition | undefined => {
+    return questDefinitions.find(q => q.id === questId);
+  };
+
   const contextValue: GameContextType = {
     gameState,
     currentCharacter: gameState.currentCharacter || null,
@@ -1950,7 +2149,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     getExperiencePercentage,
     getExperienceToNextLevel,
     isLoading,
-    error
+    error,
+    acceptQuest,
+    claimQuestReward,
+    getQuestDefinition
   };
 
   return (

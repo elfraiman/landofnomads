@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
-import { Character, DetailedBattleResult, Item, GemType, ItemRarity, Gem } from '../../types';
+import { Character, DetailedBattleResult, Item, GemType, ItemRarity, Gem, QuestProgress } from '../../types';
 import { Colors, ColorUtils } from '../../utils/colors';
 import { getStatAbbreviation } from '../../utils/stats';
 import { useGame } from '../../context/GameContext';
@@ -26,7 +26,7 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
   onClose,
   result,
 }) => {
-  const { currentCharacter, getExperiencePercentage, getExperienceToNextLevel, getActiveGemEffects } = useGame();
+  const { currentCharacter, getExperiencePercentage, getExperienceToNextLevel, getActiveGemEffects, getQuestDefinition } = useGame();
   
   // Animation for gem drops
   const borderAnimValue = useRef(new Animated.Value(0)).current;
@@ -175,6 +175,9 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
     }),
   } : {};
 
+  // Use quest progress updates from battle result (more accurate than calculating from current state)
+  const progressedQuests = result.questProgressUpdates || [];
+
   return (
     <Modal
       animationType="fade"
@@ -282,6 +285,32 @@ export const BattleResultsModal: React.FC<BattleResultsModalProps> = ({
                   </View>
                 )}
             </View>
+
+            {/* Quest Progress Updates */}
+            {progressedQuests.length > 0 && (
+              <View style={styles.questProgressContainer}>
+                <Text style={styles.sectionTitle}>Quest Progress</Text>
+                {/* Filter out duplicate quests by quest name and only show the latest progress */}
+                {progressedQuests
+                  .reduce((unique, q) => {
+                    // Keep only the latest progress for each quest
+                    const existing = unique.find(u => u.questName === q.questName);
+                    if (!existing) {
+                      unique.push(q);
+                    } else if (q.progress > existing.progress) {
+                      // Replace with higher progress
+                      unique[unique.indexOf(existing)] = q;
+                    }
+                    return unique;
+                  }, [] as typeof progressedQuests)
+                  .map((q, idx) => (
+                    <Text key={idx} style={styles.questProgressText} numberOfLines={2}>
+                      {q.questName}: {q.progress}/{q.goal} ({Math.floor((q.progress / q.goal) * 100)}%)
+                    </Text>
+                  ))
+                }
+              </View>
+            )}
           </ScrollView>
 
           <TouchableOpacity 
@@ -469,6 +498,17 @@ const styles = StyleSheet.create({
   weaponUsedText: {
     fontSize: 13,
     color: Colors.text,
+    marginBottom: 3,
+  },
+  questProgressContainer: {
+    marginBottom: 12,
+    padding: 10,
+    backgroundColor: Colors.overlay,
+    borderRadius: 8,
+  },
+  questProgressText: {
+    fontSize: 13,
+    color: Colors.primary,
     marginBottom: 3,
   },
 }); 

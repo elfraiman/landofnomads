@@ -188,8 +188,6 @@ export const createGem = (gemType: GemType, gemTier: GemTier, level: number = 1)
       level,
       price: calculateGemPrice(gemType, gemTier, level),
       statBonus: {},
-      durability: 1,
-      maxDurability: 1,
       description: `${baseData.description}. Use to gain +${bonusValue}% experience for ${tierData.duration} battles.`,
       consumeEffect: {
         statBonus: {},
@@ -212,8 +210,6 @@ export const createGem = (gemType: GemType, gemTier: GemTier, level: number = 1)
       level,
       price: calculateGemPrice(gemType, gemTier, level),
       statBonus: {},
-      durability: 1,
-      maxDurability: 1,
       description: `${baseData.description}. Use to gain +${bonusValue}% gold for ${tierData.duration} battles.`,
       consumeEffect: {
         statBonus: {},
@@ -238,8 +234,6 @@ export const createGem = (gemType: GemType, gemTier: GemTier, level: number = 1)
     level,
     price: calculateGemPrice(gemType, gemTier, level),
     statBonus: {},
-    durability: 1,
-    maxDurability: 1,
     description: `${baseData.description}. Use to gain +${effectValue} ${statType} for ${tierData.duration} battles.`,
     consumeEffect: {
       statBonus: {

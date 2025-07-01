@@ -783,6 +783,8 @@ export const generateAIOpponent = (playerLevel: number): Character => {
     inventory: [], // AI doesn't need inventory
     wins: Math.floor(Math.random() * level * 5),
     losses: Math.floor(Math.random() * level * 3),
+    activeQuests: [],
+    completedQuests: [],
     activeGemEffects: [], // AI characters start with no gem effects
     createdAt: Date.now(),
     lastActive: Date.now()
@@ -951,7 +953,9 @@ export const createCharacter = (name: string, characterClass: CharacterClass): C
     maxHealth: 100,
     wins: 0,
     losses: 0,
-    activeGemEffects: [],
+    activeQuests: [],
+    completedQuests: [],
+    activeGemEffects: [], // AI characters start with no gem effects
     createdAt: Date.now(),
     lastActive: Date.now(),
   };

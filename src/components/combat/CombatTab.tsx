@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
-import { Character, CombatResult, DetailedBattleResult } from '../../types';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useGame } from '../../context/GameContext';
-import BattleViewer from './BattleViewer';
+import { Character, CombatResult, DetailedBattleResult } from '../../types';
+import { Colors, RPGTextStyles } from '../../utils/colors';
 import { BattleResultsModal } from './BattleResultsModal';
-import { Colors, ColorUtils, RPGTextStyles } from '../../utils/colors';
+import BattleViewer from './BattleViewer';
 
 interface CombatTabProps {
   character: Character;
